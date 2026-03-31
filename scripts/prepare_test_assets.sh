@@ -19,7 +19,7 @@ for file in geoip.dat geosite.dat; do
       url="${GEOSITE_URL}"
     fi
     echo "missing local asset ${ASSET_DIR}/${file}; downloading from ${url}"
-    curl -fsSL "${url}" -o "${RESOURCES_DIR}/${file}"
+    curl --retry 5 --retry-delay 2 --retry-connrefused --connect-timeout 15 --max-time 180 -fsSL "${url}" -o "${RESOURCES_DIR}/${file}"
     continue
   fi
   cp "${ASSET_DIR}/${file}" "${RESOURCES_DIR}/${file}"

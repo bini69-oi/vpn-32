@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       MIN_COVERAGE: "55.0"
+      GOLANGCI_LINT_VERSION: "v1.64.8"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,7 +21,7 @@ jobs:
           cache: true
 
       - name: Setup golangci-lint
-        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}
 
       - name: Run full verify pipeline
         run: make verify
