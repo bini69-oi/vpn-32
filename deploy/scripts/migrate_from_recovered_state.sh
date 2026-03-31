@@ -4,7 +4,11 @@ set -euo pipefail
 # Run on target server as root.
 # Uses files previously uploaded to /root/migrate.
 
-NEW_IP="${1:-198.13.186.190}"
+if [[ $# -lt 1 || -z "${1:-}" ]]; then
+  echo "usage: $0 <new_ip>" >&2
+  exit 1
+fi
+NEW_IP="$1"
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y >/dev/null

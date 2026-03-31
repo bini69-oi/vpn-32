@@ -3,7 +3,7 @@ import json
 import sqlite3
 import sys
 
-user = sys.argv[1] if len(sys.argv) > 1 else "Максим"
+user = sys.argv[1] if len(sys.argv) > 1 else "test_user"
 
 pc = sqlite3.connect("/var/lib/vpn-product/product.db")
 cur = pc.cursor()

@@ -1,278 +1,159 @@
-# Project X
+# VPN Product — руководство по проекту
 
-> For your product operations/deploy flow, see **`README_VPN_PRODUCT.md`** (detailed practical runbook in Russian).
+Этот репозиторий содержит VPN-продукт поверх `xray-core`: API-сервис, управление профилями, синхронизацию с `3x-ui`, диагностику и скрипты деплоя.
 
-[Project X](https://github.com/XTLS) originates from XTLS protocol, providing a set of network tools such as [Xray-core](https://github.com/XTLS/Xray-core) and [REALITY](https://github.com/XTLS/REALITY).
+Документ ниже объясняет, что входит в систему, как она работает и как ее запускать/обслуживать.
 
-[README](https://github.com/XTLS/Xray-core#readme) is open, so feel free to submit your project [here](https://github.com/XTLS/Xray-core/pulls).
+## 1. Что входит в продукт
 
-## Sponsors
+- `vpn-productd` — API-слой продукта (подписки, профили, лимиты, служебные операции).
+- `xray-core` — сетевой движок и runtime.
+- `3x-ui` — панель и хранение клиентских записей.
+- `caddy` — внешний HTTPS reverse proxy.
+- `sqlite` — локальное хранилище состояния продукта (`product.db`).
 
-[![Remnawave](https://github.com/user-attachments/assets/a22d34ae-01ee-441c-843a-85356748ed1e)](https://docs.rw)
+## 2. Архитектура на высоком уровне
 
-[![Happ](https://github.com/user-attachments/assets/14055dab-e8bb-48bd-89e8-962709e4098e)](https://happ.su)
+1. Клиент обращается к API `vpn-productd`.
+2. API работает с профилями/подписками в `product.db`.
+3. При необходимости профиль синхронизируется в `3x-ui`.
+4. Генерируется runtime-конфиг для Xray.
+5. Xray применяет конфигурацию и обслуживает трафик.
 
-[**Sponsor Xray-core**](https://github.com/XTLS/Xray-core/issues/3668)
+Сопутствующие таймеры (systemd) поддерживают регулярный sync и служебные задачи.
 
-## Donation & NFTs
+## 3. Важные пути на сервере
 
-### [Collect a Project X NFT to support the development of Project X!](https://opensea.io/item/ethereum/0x5ee362866001613093361eb8569d59c4141b76d1/1)
+- `/etc/vpn-product/vpn-productd.env` — переменные окружения API.
+- `/var/lib/vpn-product/product.db` — база продукта.
+- `/etc/x-ui/x-ui.db` — база `3x-ui`.
+- `/usr/local/x-ui/bin/config.json` — runtime-конфиг `x-ui/xray`.
+- `/etc/caddy/Caddyfile` — публичный reverse proxy.
 
-[<img alt="Project X NFT" width="150px" src="https://raw2.seadn.io/ethereum/0x5ee362866001613093361eb8569d59c4141b76d1/7fa9ce900fb39b44226348db330e32/8b7fa9ce900fb39b44226348db330e32.svg" />](https://opensea.io/item/ethereum/0x5ee362866001613093361eb8569d59c4141b76d1/1)
+## 4. Основные сервисы
 
-- **TRX(Tron)/USDT/USDC: `TNrDh5VSfwd4RPrwsohr6poyNTfFefNYan`**
-- **TON: `UQApeV-u2gm43aC1uP76xAC1m6vCylstaN1gpfBmre_5IyTH`**
-- **BTC: `1JpqcziZZuqv3QQJhZGNGBVdCBrGgkL6cT`**
-- **XMR: `4ABHQZ3yJZkBnLoqiKvb3f8eqUnX4iMPb6wdant5ZLGQELctcerceSGEfJnoCk6nnyRZm73wrwSgvZ2WmjYLng6R7sR67nq`**
-- **SOL/USDT/USDC: `3x5NuXHzB5APG6vRinPZcsUv5ukWUY1tBGRSJiEJWtZa`**
-- **ETH/USDT/USDC: `0xDc3Fe44F0f25D13CACb1C4896CD0D321df3146Ee`**
-- **Project X NFT: https://opensea.io/item/ethereum/0x5ee362866001613093361eb8569d59c4141b76d1/1**
-- **VLESS NFT: https://opensea.io/collection/vless**
-- **REALITY NFT: https://opensea.io/item/ethereum/0x5ee362866001613093361eb8569d59c4141b76d1/2**
-- **Related links: [VLESS Post-Quantum Encryption](https://github.com/XTLS/Xray-core/pull/5067), [XHTTP: Beyond REALITY](https://github.com/XTLS/Xray-core/discussions/4113), [Announcement of NFTs by Project X](https://github.com/XTLS/Xray-core/discussions/3633)**
-
-## License
-
-[Mozilla Public License Version 2.0](https://github.com/XTLS/Xray-core/blob/main/LICENSE)
-
-## Documentation
-
-[Project X Official Website](https://xtls.github.io)
-
-## Telegram
-
-[Project X](https://t.me/projectXray)
-
-[Project X Channel](https://t.me/projectXtls)
-
-[Project VLESS](https://t.me/projectVless) (Русский)
-
-[Project XHTTP](https://t.me/projectXhttp) (Persian)
-
-## Installation
-
-- Linux Script
-  - [XTLS/Xray-install](https://github.com/XTLS/Xray-install) (**Official**)
-  - [tempest](https://github.com/team-cloudchaser/tempest) (supports [`systemd`](https://systemd.io) and [OpenRC](https://github.com/OpenRC/openrc); Linux-only)
-- Docker
-  - [ghcr.io/xtls/xray-core](https://ghcr.io/xtls/xray-core) (**Official**)
-  - [teddysun/xray](https://hub.docker.com/r/teddysun/xray)
-  - [wulabing/xray_docker](https://github.com/wulabing/xray_docker)
-- Web Panel
-  - [Remnawave](https://github.com/remnawave/panel)
-  - [3X-UI](https://github.com/MHSanaei/3x-ui)
-  - [PasarGuard](https://github.com/PasarGuard/panel)
-  - [Xray-UI](https://github.com/qist/xray-ui)
-  - [X-Panel](https://github.com/xeefei/X-Panel)
-  - [Marzban](https://github.com/Gozargah/Marzban)
-  - [Hiddify](https://github.com/hiddify/Hiddify-Manager)
-  - [TX-UI](https://github.com/AghayeCoder/tx-ui)
-- One Click
-  - [Xray-REALITY](https://github.com/zxcvos/Xray-script), [xray-reality](https://github.com/sajjaddg/xray-reality), [reality-ezpz](https://github.com/aleskxyz/reality-ezpz)
-  - [Xray_bash_onekey](https://github.com/hello-yunshu/Xray_bash_onekey), [XTool](https://github.com/LordPenguin666/XTool), [VPainLess](https://github.com/vpainless/vpainless)
-  - [v2ray-agent](https://github.com/mack-a/v2ray-agent), [Xray_onekey](https://github.com/wulabing/Xray_onekey), [ProxySU](https://github.com/proxysu/ProxySU)
-- Magisk
-  - [NetProxy-Magisk](https://github.com/Fanju6/NetProxy-Magisk)
-  - [Xray4Magisk](https://github.com/Asterisk4Magisk/Xray4Magisk)
-  - [Xray_For_Magisk](https://github.com/E7KMbb/Xray_For_Magisk)
-- Homebrew
-  - `brew install xray`
-
-## Usage
-
-- Example
-  - [VLESS-XTLS-uTLS-REALITY](https://github.com/XTLS/REALITY#readme)
-  - [VLESS-TCP-XTLS-Vision](https://github.com/XTLS/Xray-examples/tree/main/VLESS-TCP-XTLS-Vision)
-  - [All-in-One-fallbacks-Nginx](https://github.com/XTLS/Xray-examples/tree/main/All-in-One-fallbacks-Nginx)
-- Xray-examples
-  - [XTLS/Xray-examples](https://github.com/XTLS/Xray-examples)
-  - [chika0801/Xray-examples](https://github.com/chika0801/Xray-examples)
-  - [lxhao61/integrated-examples](https://github.com/lxhao61/integrated-examples)
-- Tutorial
-  - [XTLS Vision](https://github.com/chika0801/Xray-install)
-  - [REALITY (English)](https://cscot.pages.dev/2023/03/02/Xray-REALITY-tutorial/)
-  - [XTLS-Iran-Reality (English)](https://github.com/SasukeFreestyle/XTLS-Iran-Reality)
-  - [Xray REALITY with 'steal oneself' (English)](https://computerscot.github.io/vless-xtls-utls-reality-steal-oneself.html)
-  - [Xray with WireGuard inbound (English)](https://g800.pages.dev/wireguard)
-
-## GUI Clients
-
-- OpenWrt
-  - [PassWall](https://github.com/Openwrt-Passwall/openwrt-passwall), [PassWall 2](https://github.com/Openwrt-Passwall/openwrt-passwall2)
-  - [ShadowSocksR Plus+](https://github.com/fw876/helloworld)
-  - [luci-app-xray](https://github.com/yichya/luci-app-xray) ([openwrt-xray](https://github.com/yichya/openwrt-xray))
-- Asuswrt-Merlin
-  - [XRAYUI](https://github.com/DanielLavrushin/asuswrt-merlin-xrayui)
-  - [fancyss](https://github.com/hq450/fancyss)
-- Windows
-  - [v2rayN](https://github.com/2dust/v2rayN)
-  - [Furious](https://github.com/LorenEteval/Furious)
-  - [Invisible Man - Xray](https://github.com/InvisibleManVPN/InvisibleMan-XRayClient)
-  - [AnyPortal](https://github.com/AnyPortal/AnyPortal)
-  - [GenyConnect](https://github.com/genyleap/GenyConnect)
-- Android
-  - [v2rayNG](https://github.com/2dust/v2rayNG)
-  - [X-flutter](https://github.com/XTLS/X-flutter)
-  - [SaeedDev94/Xray](https://github.com/SaeedDev94/Xray)
-  - [SimpleXray](https://github.com/lhear/SimpleXray)
-  - [XrayFA](https://github.com/Q7DF1/XrayFA)
-  - [AnyPortal](https://github.com/AnyPortal/AnyPortal)
-  - [NetProxy-Magisk](https://github.com/Fanju6/NetProxy-Magisk)
-- iOS & macOS arm64 & tvOS
-  - [Happ](https://apps.apple.com/app/happ-proxy-utility/id6504287215) | [Happ RU](https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973) | [Happ tvOS](https://apps.apple.com/us/app/happ-proxy-utility-for-tv/id6748297274)
-  - [Streisand](https://apps.apple.com/app/streisand/id6450534064)
-  - [OneXray](https://github.com/OneXray/OneXray)
-- macOS arm64 & x64
-  - [Happ](https://apps.apple.com/app/happ-proxy-utility/id6504287215) | [Happ RU](https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973)
-  - [V2rayU](https://github.com/yanue/V2rayU)
-  - [V2RayXS](https://github.com/tzmax/V2RayXS)
-  - [Furious](https://github.com/LorenEteval/Furious)
-  - [OneXray](https://github.com/OneXray/OneXray)
-  - [GoXRay](https://github.com/goxray/desktop)
-  - [AnyPortal](https://github.com/AnyPortal/AnyPortal)
-  - [v2rayN](https://github.com/2dust/v2rayN)
-  - [GenyConnect](https://github.com/genyleap/GenyConnect)
-- Linux
-  - [v2rayA](https://github.com/v2rayA/v2rayA)
-  - [Furious](https://github.com/LorenEteval/Furious)
-  - [GorzRay](https://github.com/ketetefid/GorzRay)
-  - [GoXRay](https://github.com/goxray/desktop)
-  - [AnyPortal](https://github.com/AnyPortal/AnyPortal)
-  - [v2rayN](https://github.com/2dust/v2rayN)
-  - [GenyConnect](https://github.com/genyleap/GenyConnect)
-
-## Others that support VLESS, XTLS, REALITY, XUDP, PLUX...
-
-- iOS & macOS arm64 & tvOS
-  - [Shadowrocket](https://apps.apple.com/app/shadowrocket/id932747118)
-  - [Loon](https://apps.apple.com/us/app/loon/id1373567447)
-  - [Egern](https://apps.apple.com/us/app/egern/id1616105820)
-  - [Quantumult X](https://apps.apple.com/us/app/quantumult-x/id1443988620)
-- Xray Tools
-  - [xray-knife](https://github.com/lilendian0x00/xray-knife)
-  - [xray-checker](https://github.com/kutovoys/xray-checker)
-- Xray Wrapper
-  - [XTLS/libXray](https://github.com/XTLS/libXray)
-  - [xtls-sdk](https://github.com/remnawave/xtls-sdk)
-  - [xtlsapi](https://github.com/hiddify/xtlsapi)
-  - [AndroidLibXrayLite](https://github.com/2dust/AndroidLibXrayLite)
-  - [Xray-core-python](https://github.com/LorenEteval/Xray-core-python)
-  - [xray-api](https://github.com/XVGuardian/xray-api)
-- [XrayR](https://github.com/XrayR-project/XrayR)
-  - [XrayR-release](https://github.com/XrayR-project/XrayR-release)
-  - [XrayR-V2Board](https://github.com/missuo/XrayR-V2Board)
-- Cores
-  - [Amnezia VPN](https://github.com/amnezia-vpn)
-  - [mihomo](https://github.com/MetaCubeX/mihomo)
-  - [sing-box](https://github.com/SagerNet/sing-box)
-
-## Contributing
-
-[Code of Conduct](https://github.com/XTLS/Xray-core/blob/main/CODE_OF_CONDUCT.md)
-
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/XTLS/Xray-core)
-
-## Credits
-
-- [Xray-core v1.0.0](https://github.com/XTLS/Xray-core/releases/tag/v1.0.0) was forked from [v2fly-core 9a03cc5](https://github.com/v2fly/v2ray-core/commit/9a03cc5c98d04cc28320fcee26dbc236b3291256), and we have made & accumulated a huge number of enhancements over time, check [the release notes for each version](https://github.com/XTLS/Xray-core/releases).
-- For third-party projects used in [Xray-core](https://github.com/XTLS/Xray-core), check your local or [the latest go.mod](https://github.com/XTLS/Xray-core/blob/main/go.mod).
-
-## One-line Compilation
-
-### Windows (PowerShell)
-
-```powershell
-$env:CGO_ENABLED=0
-go build -o xray.exe -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -v ./main
-```
-
-### Linux / macOS
+Проверка:
 
 ```bash
-CGO_ENABLED=0 go build -o xray -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -v ./main
+systemctl is-active vpn-productd x-ui caddy
 ```
 
-### Reproducible Releases
-
-Make sure that you are using the same Go version, and remember to set the git commit id (7 bytes):
+Перезапуск:
 
 ```bash
-CGO_ENABLED=0 go build -o xray -trimpath -buildvcs=false -gcflags="all=-l=4" -ldflags="-X github.com/xtls/xray-core/core.build=REPLACE -s -w -buildid=" -v ./main
+systemctl restart vpn-productd x-ui caddy
 ```
 
-If you are compiling a 32-bit MIPS/MIPSLE target, use this command instead:
+## 5. Быстрый старт для разработки
+
+Требования:
+
+- Go (актуальная версия из `go.mod`)
+- `golangci-lint` (или запуск через `make lint`)
+
+Проверки:
 
 ```bash
-CGO_ENABLED=0 go build -o xray -trimpath -buildvcs=false -gcflags="-l=4" -ldflags="-X github.com/xtls/xray-core/core.build=REPLACE -s -w -buildid=" -v ./main
+make test
+make lint
+make cover
 ```
 
-## VPN Product Foundation (This Repository)
+## 6. CI и качество
 
-The repository now includes a product-layer foundation without changing the upstream core architecture.
+В проекте используется workflow CI и цели `Makefile`.
 
-- `cmd/vpn-productd`: local daemon for profile-aware connection orchestration.
-- `cmd/vpn-productctl`: CLI for status, connect, disconnect, profiles, diagnostics.
-- `product/*`: domain, profile storage, config generation, reconnect, diagnostics, API contracts, and platform hooks.
-
-Build commands:
+Рекомендуемый локальный минимум перед push:
 
 ```bash
-go build -v ./cmd/vpn-productd
-go build -v ./cmd/vpn-productctl
+make test && make lint
 ```
 
-Run daemon:
+Если нужен более полный прогон:
 
 ```bash
-export VPN_PRODUCT_API_TOKEN="change-me-strong-token"
-./vpn-productd --listen 127.0.0.1:8080 --data-dir ./var/vpn-product
+make test && make lint && make cover
 ```
 
-CLI examples:
+## 7. Работа с подписками и пользователями
+
+Типовой сценарий:
+
+1. Создать/обновить подписку через API.
+2. Проверить запись в `product.db`.
+3. Проверить, что пользователь присутствует в `x-ui`.
+4. Убедиться, что runtime-конфиг актуален.
+
+Полезные скрипты в `deploy/scripts/`:
+
+- `sync_xui_to_product.sh`
+- `sync_xui_usage_to_product.sh`
+- `verify_user_limits.py`
+- `cleanup_users.py`
+- `test_ephemeral_user.sh`
+
+## 8. Миграции и восстановление
+
+Для экспорта/импорта состояния используются:
+
+- `deploy/scripts/export_server_state.sh`
+- `deploy/scripts/import_server_state.sh`
+- `deploy/scripts/migrate_from_recovered_state.sh`
+
+Во время миграции обязательно указывать целевой IP явно:
 
 ```bash
-./vpn-productctl --token "$VPN_PRODUCT_API_TOKEN" status
-./vpn-productctl --token "$VPN_PRODUCT_API_TOKEN" profiles
-./vpn-productctl --token "$VPN_PRODUCT_API_TOKEN" profile-import ./profile.json
-./vpn-productctl --token "$VPN_PRODUCT_API_TOKEN" quota-set my-secure-profile 102400
-./vpn-productctl --token "$VPN_PRODUCT_API_TOKEN" stats-profiles
-./vpn-productctl --token "$VPN_PRODUCT_API_TOKEN" connect <profile-id>
-./vpn-productctl --token "$VPN_PRODUCT_API_TOKEN" diagnostics
-./vpn-productctl --token "$VPN_PRODUCT_API_TOKEN" disconnect
+bash deploy/scripts/migrate_from_recovered_state.sh <new_ip>
 ```
 
-3X-UI sync helpers:
+## 9. Ежедневные резервные копии
+
+В ветке продукта добавлены systemd-юниты для ежедневного backup в `00:00`.
+
+Установка:
 
 ```bash
-./vpn-productctl --token "$VPN_PRODUCT_API_TOKEN" panel-user-upsert u1 alice my-secure-profile active
-./vpn-productctl --token "$VPN_PRODUCT_API_TOKEN" panel-users
+sudo bash deploy/scripts/install_backup_timer.sh
 ```
 
-## VPN SaaS in 5 minutes
+Проверка:
 
-1. Install on Ubuntu 22.04/24.04:
 ```bash
-sudo bash scripts/install-ubuntu.sh
+systemctl status vpn-product-backup.timer --no-pager
+systemctl status vpn-product-backup.service --no-pager
+ls -lah /var/backups/vpn-product
 ```
-2. Verify service:
-```bash
-systemctl status vpn-productd --no-pager
-curl -s -H "Authorization: Bearer $(cat /etc/vpn-product/token)" http://127.0.0.1:8080/v1/health
-```
-3. Import profile:
-```bash
-vpn-productctl --api http://127.0.0.1:8080 --token "$(cat /etc/vpn-product/token)" profile-import ./product/examples/secure_profile.json
-```
-4. Generate delivery links for clients:
-```bash
-curl -s -H "Authorization: Bearer $(cat /etc/vpn-product/token)" "http://127.0.0.1:8080/v1/delivery/links?profileId=secure-performance-default"
-```
-5. Enforce subscription windows and quota:
-- `subscriptionExpiresAt` auto-disables access after expiry.
-- `trafficLimitGb` and `trafficUsedBytes` are validated by `CheckAccess` before runtime start.
 
-This flow gives you customer-ready import links and automatic access enforcement for paid plans.
+По умолчанию:
 
-## Stargazers over time
+- архив + `.sha256` создаются автоматически;
+- старые копии удаляются по retention (14 дней).
 
-[![Stargazers over time](https://starchart.cc/XTLS/Xray-core.svg)](https://starchart.cc/XTLS/Xray-core)
+## 10. Диагностика и отладка
+
+Для точечной проверки пользователя:
+
+```bash
+python3 deploy/scripts/diag_user_sync.py <user_id>
+```
+
+Если `user_id` не передан, используется безопасное тестовое значение.
+
+## 11. Практические рекомендации
+
+- Не коммитить персональные данные и реальные production-IP.
+- Не хранить секреты в репозитории.
+- Перед деплоем всегда делать backup.
+- После деплоя запускать smoke-проверки.
+
+## 12. Структура репозитория (кратко)
+
+- `product/` — доменная логика продукта и API.
+- `deploy/` — systemd-юниты, env-файлы, операционные скрипты.
+- `app/`, `core/`, `proxy/`, `transport/`, `features/` — компоненты `xray-core`.
+- `testing/` — интеграционные и сценарные тесты.
+
+## 13. Лицензия и источник ядра
+
+Проект основан на `xray-core` и сохраняет совместимость с исходной архитектурой ядра.
+Подробности по лицензии смотри в файле `LICENSE`.
