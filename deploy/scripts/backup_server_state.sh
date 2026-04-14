@@ -46,12 +46,18 @@ if [[ -n "${BACKUP_ENCRYPT_KEY}" ]]; then
         --symmetric --cipher-algo AES256 \
         -o "${archive_path}.gpg" "${archive_path}"
     rm -f "${archive_path}"
+    # Pre-encryption checksum is obsolete once the plaintext archive is removed.
+    rm -f "${archive_path}.sha256"
     archive_path="${archive_path}.gpg"
     sha256sum "${archive_path}" > "${archive_path}.sha256"
 fi
 
-# Keep recent backups only.
-find "${BACKUP_DIR}" -type f -name 'vpn-migration-*.tar.gz' -mtime +"${RETENTION_DAYS}" -delete
-find "${BACKUP_DIR}" -type f -name 'vpn-migration-*.tar.gz.sha256' -mtime +"${RETENTION_DAYS}" -delete
+# Keep recent backups only (plain archives, encrypted .gpg, and their checksums).
+find "${BACKUP_DIR}" -type f \( \
+    -name 'vpn-migration-*.tar.gz' -o \
+    -name 'vpn-migration-*.tar.gz.sha256' -o \
+    -name 'vpn-migration-*.tar.gz.gpg' -o \
+    -name 'vpn-migration-*.tar.gz.gpg.sha256' \
+\) -mtime +"${RETENTION_DAYS}" -delete
 
 echo "backup_ok archive=${archive_path}"
