@@ -4,7 +4,7 @@
 
 **Высокопроизводительный VPN-сервис на базе Xray-core**
 
-Управление подписками • Интеграция с 3x-ui • Telegram-бот • Маршрутизация и WARP
+Управление подписками • Интеграция с 3x-ui • Telegram-бот и Mini App • Маршрутизация и WARP
 
 [![Go](https://img.shields.io/badge/Go-1.26-00ADD8?style=flat-square&logo=go)](https://go.dev)
 [![Xray](https://img.shields.io/badge/Xray--core-fork-blue?style=flat-square)](https://github.com/XTLS/Xray-core)
@@ -17,9 +17,9 @@
 
 ## Что это
 
-VPN Product — слой вокруг [Xray-core](https://github.com/XTLS/Xray-core): API (`vpn-productd`), SQLite, интеграция с [3x-ui](https://github.com/MHSanaei/3x-ui), скрипты деплоя и опционально Telegram-бот.
+VPN Product — слой вокруг [Xray-core](https://github.com/XTLS/Xray-core): API (`vpn-productd`), SQLite, интеграция с [3x-ui](https://github.com/MHSanaei/3x-ui), скрипты деплоя. Опционально — клиенты Telegram в **`apps/`**: основной бот на Python (aiogram) и Mini App на Node (Express + статика).
 
-Исходники самого ядра Xray лежат в корне репозитория (`app/`, `common/`, `core/`, `proxy/`, `transport/`, …) с тем же модулем Go `github.com/xtls/xray-core` — **мы не переносим их в подпапку `xray/`**, чтобы не ломать импорты. Код продукта — в **`internal/`**. Клиентские оболочки (Telegram) — в **`apps/`**.
+Исходники ядра Xray лежат в корне репозитория (`app/`, `common/`, `core/`, `proxy/`, `transport/`, …) с модулем Go `github.com/xtls/xray-core` — **их не выносят в подпапку**, чтобы не ломать импорты. Код продукта (API, БД, интеграции) — в **`internal/`**. Обзор каталога **`apps/`**: [apps/README.md](apps/README.md).
 
 ### Ключевые возможности
 
@@ -28,6 +28,7 @@ VPN Product — слой вокруг [Xray-core](https://github.com/XTLS/Xray-c
 - **3x-ui** — синхронизация пользователей и лимитов
 - **Маршрутизация** — пресеты RU + WARP, geo-данные, правила в JSON ([docs/API.md](docs/API.md))
 - **Деплой** — systemd, скрипты в `deploy/scripts/`, пример Caddy: [deploy/caddy/Caddyfile.example](deploy/caddy/Caddyfile.example)
+- **Telegram** — `apps/vpn-telegram-bot/` (бот), `apps/telegram-miniapp/` (веб + прокси к API); см. README в каждом каталоге
 
 ---
 
@@ -36,20 +37,20 @@ VPN Product — слой вокруг [Xray-core](https://github.com/XTLS/Xray-c
 См. подробнее [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ```
-┌──────────────┐     ┌──────────────────┐     ┌────────────┐
-│  Telegram    │────▶│   vpn-productd   │────▶│   3x-ui    │
-│     Bot      │     │   (Go API)       │     │  (панель)  │
-└──────────────┘     └────────┬─────────┘     └─────┬──────┘
-                              │                     │
-                     ┌────────▼─────────┐     ┌─────▼──────┐
-                     │   product.db     │     │  Xray-core │
-                     │   (SQLite)       │     │  (трафик)  │
-                     └──────────────────┘     └────────────┘
+┌─────────────────────┐     ┌──────────────────┐     ┌────────────┐
+│ apps/               │────▶│   vpn-productd   │────▶│   3x-ui    │
+│ бот · Mini App      │     │   (Go API)       │     │  (панель)  │
+└─────────────────────┘     └────────┬─────────┘     └─────┬──────┘
+                                     │                     │
+                            ┌────────▼─────────┐     ┌──────▼──────┐
+                            │   product.db     │     │  Xray-core  │
+                            │   (SQLite)       │     │  (трафик)   │
+                            └──────────────────┘     └─────────────┘
 ```
 
 **Поток данных (упрощённо):**
 
-1. Клиент или бот обращается к API `vpn-productd`.
+1. Клиенты в `apps/` (polling-бот или Mini App по HTTPS) либо другие интеграции обращаются к API `vpn-productd`.
 2. Состояние подписок и профилей хранится в SQLite (`VPN_PRODUCT_DATA_DIR`).
 3. При необходимости выполняется синхронизация с 3x-ui.
 4. Пользовательский VPN-трафик обрабатывает Xray на сервере (конфигурация панели), а не сам `vpn-productd`.
@@ -62,6 +63,7 @@ VPN Product — слой вокруг [Xray-core](https://github.com/XTLS/Xray-c
 
 - Go 1.26+ (см. `go.mod`)
 - `golangci-lint` для `make lint`
+- для `apps/`: Python 3.12+ (бот), Node.js + npm (Mini App) — см. README в соответствующих каталогах
 
 ### Сборка и проверки
 
@@ -77,6 +79,19 @@ make verify         # полный прогон включая все пакет
 ```
 
 Конфигурация для сервера: скопируйте [deploy/env/vpn-productd.env.example](deploy/env/vpn-productd.env.example) в `/etc/vpn-product/vpn-productd.env` и задайте токены.
+
+Корневой [Dockerfile](Dockerfile) собирает только **`vpn-productd`** / **`vpn-productctl`**. Образ бота: `apps/vpn-telegram-bot/Dockerfile`.
+
+### Клиенты Telegram (`apps/`, опционально)
+
+```bash
+make bot-venv    # один раз: venv и зависимости в apps/vpn-telegram-bot/
+make bot         # запуск aiogram-бота (нужен .env, см. apps/vpn-telegram-bot/.env.example)
+
+cd apps/telegram-miniapp && npm install && cp .env.example .env && npm start
+```
+
+Подробные команды, systemd и прод: [docs/COMMANDS.md](docs/COMMANDS.md).
 
 ---
 
@@ -108,15 +123,17 @@ make verify         # полный прогон включая все пакет
 
 | Путь | Назначение |
 |------|------------|
-| `apps/` | Telegram-бот и Mini App (см. [apps/README.md](apps/README.md)) |
+| `apps/` | Клиенты Telegram: [vpn-telegram-bot](apps/vpn-telegram-bot/README.md), [telegram-miniapp](apps/telegram-miniapp/README.md); индекс [apps/README.md](apps/README.md) |
 | `cmd/vpn-productd`, `cmd/vpn-productctl` | Точки входа продукта |
 | `internal/` | API, конфигген, профили, подписки, SQLite, routing, … |
 | `app/`, `common/`, `core/`, `features/`, `infra/`, `proxy/`, `transport/`, `main/` | Исходники Xray-core (upstream layout) |
-| `tests/integration/` | Интеграционные тесты сценариев (ранее `testing/`) |
+| `tests/` | Тесты Go (в т.ч. `tests/integration/` для сценариев продукта) |
 | `deploy/` | systemd, скрипты, env-примеры, Caddy |
 | `docs/` | API, деплой, runbooks |
 | `configs/` | Примеры конфигов |
-| `archive/telegram-bot-legacy/` | Старый бот (`python-telegram-bot`), архив |
+| `scripts/` | Вспомогательные скрипты (сборка тестовых ассетов, `secret_scan.py` и др.) |
+| `benchmarks/` | Бенчмарки (опционально) |
+| `archive/` | Неиспользуемый код и прочие архивы (см. [archive/README.md](archive/README.md)) |
 
 ---
 
@@ -125,6 +142,7 @@ make verify         # полный прогон включая все пакет
 | Документ | Описание |
 |----------|----------|
 | [docs/API.md](docs/API.md) | REST API |
+| [docs/COMMANDS.md](docs/COMMANDS.md) | Команды: сборка, сервисы, `apps/`, мини-приложение |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Деплой и эксплуатация |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Архитектура |
 | [docs/DR_RUNBOOK.md](docs/DR_RUNBOOK.md) | Disaster recovery |
