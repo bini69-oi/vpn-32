@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>VPN</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+
+    :root{
+      --bg:#111214;
+      --card:#1b1d21;
+      --border:#2a2d33;
+      --text:#e8e8ec;
+      --dim:#8b8d95;
+      --accent:#3478f6;
+      --accent-dim:rgba(52,120,246,.12);
+      --green:#30d158;
+      --green-dim:rgba(48,209,88,.12);
+      --red:#ff453a;
+      --orange:#ff9f0a;
+    }
+
+    body{
+      font-family:-apple-system,'SF Pro Text','Helvetica Neue',sans-serif;
+      background:var(--bg);color:var(--text);
+      min-height:100vh;-webkit-font-smoothing:antialiased;
+      padding-bottom:env(safe-area-inset-bottom,20px);
+    }
+
+    .wrap{max-width:420px;margin:0 auto}
+
+    .hdr{display:flex;align-items:center;gap:12px;padding:20px 16px 16px}
+    .hdr-icon{width:42px;height:42px;border-radius:12px;background:var(--accent-dim);
+      display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+    .hdr-title{font-size:18px;font-weight:700;letter-spacing:-.3px}
+    .hdr-sub{font-size:13px;color:var(--dim);margin-top:1px}
+
+    .tabs{display:flex;margin:0 16px 14px;background:var(--card);border-radius:10px;
+      padding:3px;border:1px solid var(--border)}
+    .tab{flex:1;padding:9px 0;text-align:center;font-size:13px;font-weight:600;
+      border-radius:8px;border:none;cursor:pointer;font-family:inherit;
+      background:transparent;color:var(--dim);transition:all .15s}
+    .tab.on{background:var(--accent);color:#fff}
+
+    .card{background:var(--card);border-radius:14px;padding:16px 18px;
+      margin:0 16px 10px;border:1px solid var(--border)}
+    .row{display:flex;justify-content:space-between;align-items:center;padding:11px 0}
+    .row+.row{border-top:1px solid var(--border)}
+    .row-label{font-size:13px;color:var(--dim)}
+    .row-val{font-size:15px;font-weight:600}
+
+    .badge{font-size:13px;font-weight:700;padding:3px 10px;border-radius:20px}
+    .badge-ok{background:var(--green-dim);color:var(--green)}
+
+    .bar-wrap{height:6px;border-radius:3px;background:var(--border);margin-top:2px}
+    .bar-fill{height:100%;border-radius:3px;transition:width .8s ease}
+
+    .btn{display:flex;align-items:center;justify-content:center;gap:8px;
+      width:100%;padding:14px 0;border:none;border-radius:12px;
+      font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .15s}
+    .btn:active{opacity:.7}
+    .btn:disabled{opacity:.4;pointer-events:none}
+    .btn-accent{background:var(--accent);color:#fff}
+    .btn-flat{background:var(--card);color:var(--text);border:1px solid var(--border)}
+
+    .btns{display:flex;flex-direction:column;gap:8px;padding:6px 16px 0}
+
+    .step-row{display:flex;gap:12px;align-items:flex-start}
+    .step-n{width:26px;height:26px;border-radius:50%;background:var(--accent-dim);
+      color:var(--accent);display:flex;align-items:center;justify-content:center;
+      font-size:13px;font-weight:700;flex-shrink:0;margin-top:1px}
+    .step-title{font-size:15px;font-weight:600;margin-bottom:4px}
+    .step-desc{font-size:13px;color:var(--dim);line-height:1.5;margin-bottom:12px}
+
+    .store-btns{display:flex;gap:8px}
+    .store-btn{flex:1;padding:10px 0;text-align:center;font-size:13px;font-weight:600;
+      border-radius:10px;background:var(--card);color:var(--text);
+      border:1px solid var(--border);text-decoration:none;font-family:inherit}
+
+    .link-box{display:flex;align-items:center;gap:10px;padding:10px 12px;
+      background:var(--bg);border-radius:10px;cursor:pointer;border:1px solid var(--border)}
+    .link-url{flex:1;font-family:monospace;font-size:12px;color:var(--accent);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+    .empty{text-align:center;padding:36px 20px}
+    .empty-icon{font-size:40px;margin-bottom:12px}
+    .empty-title{font-size:17px;font-weight:700;margin-bottom:6px}
+    .empty-desc{font-size:14px;color:var(--dim);line-height:1.5}
+
+    .loading{display:flex;align-items:center;justify-content:center;min-height:60vh}
+    .spin{width:32px;height:32px;border:3px solid var(--border);
+      border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite}
+    @keyframes sp{to{transform:rotate(360deg)}}
+
+    .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);
+      padding:10px 22px;border-radius:10px;font-size:14px;font-weight:600;color:#fff;
+      box-shadow:0 4px 20px rgba(0,0,0,.4);z-index:100;transition:transform .25s ease}
+    .toast.show{transform:translateX(-50%) translateY(0)}
+
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="v-loading" class="loading">
+    <div style="text-align:center">
+      <div class="spin"></div>
+      <p style="color:var(--dim);font-size:14px;margin-top:14px">Загрузка...</p>
+    </div>
+  </div>
+
+  <div id="v-main" class="hidden">
+
+    <div class="hdr">
+      <div class="hdr-icon">🛡</div>
+      <div>
+        <div class="hdr-title">VPN</div>
+        <div class="hdr-sub" id="hdr-status">—</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab on" data-t="sub">Подписка</button>
+      <button class="tab" data-t="setup">Настройка</button>
+    </div>
+
+    <!-- ── Подписка ── -->
+    <div id="t-sub">
+      <div id="sub-active" class="hidden">
+        <div class="card">
+          <div class="row">
+            <span class="row-label">Статус</span>
+            <span class="badge badge-ok">Активна</span>
+          </div>
+          <div class="row">
+            <span class="row-label">Тариф</span>
+            <span class="row-val" id="f-plan">—</span>
+          </div>
+          <div class="row">
+            <span class="row-label">Осталось</span>
+            <span class="row-val" id="f-days">—</span>
+          </div>
+          <div class="row">
+            <span class="row-label">До</span>
+            <span class="row-val" id="f-expires">—</span>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <span style="font-size:13px;color:var(--dim)">Трафик</span>
+            <span style="font-size:13px;font-weight:600" id="f-traffic">—</span>
+          </div>
+          <div class="bar-wrap">
+            <div class="bar-fill" id="f-bar" style="width:1%;background:var(--accent)"></div>
+          </div>
+        </div>
+        <div class="btns">
+          <button class="btn btn-accent" id="btn-renew">Продлить подписку</button>
+          <button class="btn btn-flat" id="btn-copy">Скопировать ссылку</button>
+        </div>
+      </div>
+
+      <div id="sub-empty" class="hidden">
+        <div class="card">
+          <div class="empty">
+            <div class="empty-icon">🛡</div>
+            <div class="empty-title">Подписка не активна</div>
+            <div class="empty-desc">Оформи подписку, чтобы получить доступ к VPN. 30 дней, 1 TB трафика.</div>
+          </div>
+        </div>
+        <div class="btns">
+          <button class="btn btn-accent" id="btn-buy">Купить подписку</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Настройка ── -->
+    <div id="t-setup" class="hidden">
+      <div class="card">
+        <div class="step-row">
+          <div class="step-n">1</div>
+          <div style="flex:1">
+            <div class="step-title">Установи приложение</div>
+            <div class="step-desc">Скачай Happ — VPN-клиент для iOS и Android.</div>
+            <div class="store-btns">
+              <!-- TODO: замени ЗАГЛУШКА на реальные ссылки -->
+              <a href="https://apps.apple.com/app/id_ЗАГЛУШКА" target="_blank" rel="noopener" class="store-btn">App Store</a>
+              <a href="https://play.google.com/store/apps/details?id=ЗАГЛУШКА" target="_blank" rel="noopener" class="store-btn">Google Play</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="step-row">
+          <div class="step-n">2</div>
+          <div style="flex:1">
+            <div class="step-title">Подключись к VPN</div>
+            <div class="step-desc">Нажми кнопку — подписка автоматически добавится в Happ. Ничего вводить не нужно.</div>
+            <a href="#" id="btn-happ" class="btn btn-accent hidden" style="text-decoration:none;font-size:14px">Открыть в Happ</a>
+            <div id="happ-no-sub" style="text-align:center;padding:12px 0;font-size:13px;color:var(--dim);background:var(--bg);border-radius:10px">Сначала оформи подписку</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="step-row">
+          <div class="step-n">3</div>
+          <div style="flex:1">
+            <div class="step-title">Готово</div>
+            <div class="step-desc" style="margin-bottom:0">Включи VPN в приложении и пользуйся. Если перестал работать — продли подписку.</div>
+          </div>
+        </div>
+      </div>
+      <div id="manual-link" class="card hidden" style="margin-top:4px">
+        <div style="font-size:13px;color:var(--dim);margin-bottom:8px">Если автоматически не открылось — скопируй вручную:</div>
+        <div class="link-box" id="link-box-copy">
+          <span class="link-url" id="f-link-url">—</span>
+          <span style="font-size:16px;flex-shrink:0">📋</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+const initData = tg?.initData || '';
+
+let STATE = { subUrl: null, happLink: null };
+const $ = id => document.getElementById(id);
+
+function toast(msg, ok) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.style.background = ok !== false ? '#30d158' : '#ff453a';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+// Tabs
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
+    t.classList.add('on');
+    const id = t.dataset.t;
+    $('t-sub').classList.toggle('hidden', id !== 'sub');
+    $('t-setup').classList.toggle('hidden', id !== 'setup');
+  });
+});
+
+// ── API ──
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': initData } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch('/api' + path, opts);
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Ошибка');
+  return r.json();
+}
+
+// ── Helpers ──
+function fmtBytes(b) {
+  if (!b) return '0 GB';
+  const gb = b / (1024 ** 3);
+  return gb >= 1024 ? (gb / 1024).toFixed(1) + ' TB' : (gb < 10 ? gb.toFixed(1) : Math.round(gb)) + ' GB';
+}
+function fmtDate(iso) {
+  return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+function dw(n) {
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return 'дней';
+  if (b === 1) return 'день';
+  return b >= 2 && b <= 4 ? 'дня' : 'дней';
+}
+
+// ── Render ──
+function render(d) {
+  const active = d && d.active;
+  $('hdr-status').textContent = active ? 'Подписка активна' : 'Нет активной подписки';
+
+  if (active) {
+    $('sub-active').classList.remove('hidden');
+    $('sub-empty').classList.add('hidden');
+    $('f-plan').textContent = d.plan || 'Стандарт';
+    $('f-days').textContent = d.daysLeft + ' ' + dw(d.daysLeft);
+    $('f-expires').textContent = fmtDate(d.expiresAt);
+
+    const used = d.usedBytes || 0, total = d.totalBytes || 1099511627776;
+    const pct = Math.min(100, (used / total) * 100);
+    $('f-traffic').innerHTML = fmtBytes(used) + '<span style="color:var(--dim);font-weight:400"> / ' + fmtBytes(total) + '</span>';
+    $('f-bar').style.width = Math.max(1, pct) + '%';
+    $('f-bar').style.background = pct > 90 ? 'var(--red)' : pct > 70 ? 'var(--orange)' : 'var(--accent)';
+
+    STATE.subUrl = d.url || d.subUrl || null;
+    STATE.happLink = d.happLink || null;
+
+    if (STATE.happLink) {
+      $('btn-happ').href = STATE.happLink;
+      $('btn-happ').classList.remove('hidden');
+      $('happ-no-sub').classList.add('hidden');
+    }
+    if (STATE.subUrl) {
+      $('manual-link').classList.remove('hidden');
+      $('f-link-url').textContent = STATE.subUrl;
+    }
+  } else {
+    $('sub-active').classList.add('hidden');
+    $('sub-empty').classList.remove('hidden');
+    $('btn-happ').classList.add('hidden');
+    $('happ-no-sub').classList.remove('hidden');
+    $('manual-link').classList.add('hidden');
+  }
+}
+
+// ── Actions ──
+$('btn-renew').addEventListener('click', async () => {
+  $('btn-renew').disabled = true;
+  $('btn-renew').textContent = 'Продление...';
+  try { await api('POST', '/subscribe'); toast('Подписка продлена'); await load(); }
+  catch (e) { toast(e.message, false); }
+  $('btn-renew').disabled = false;
+  $('btn-renew').textContent = 'Продлить подписку';
+});
+
+$('btn-buy').addEventListener('click', async () => {
+  $('btn-buy').disabled = true;
+  $('btn-buy').textContent = 'Оформление...';
+  try { await api('POST', '/subscribe'); toast('Подписка оформлена'); await load(); }
+  catch (e) { toast(e.message, false); }
+  $('btn-buy').disabled = false;
+  $('btn-buy').textContent = 'Купить подписку';
+});
+
+$('btn-copy').addEventListener('click', () => {
+  if (!STATE.subUrl) return;
+  navigator.clipboard.writeText(STATE.subUrl).catch(() => {});
+  toast('Ссылка скопирована');
+});
+
+$('link-box-copy').addEventListener('click', () => {
+  if (!STATE.subUrl) return;
+  navigator.clipboard.writeText(STATE.subUrl).catch(() => {});
+  toast('Ссылка скопирована');
+});
+
+// ── Load ──
+async function load() {
+  try {
+    // TODO: endpoint должен возвращать:
+    // { active, plan, daysLeft, expiresAt, usedBytes, totalBytes, subUrl, happLink }
+    const d = await api('GET', '/status');
+    render(d);
+  } catch { render({ active: false }); }
+}
+
+async function init() {
+  await load();
+  $('v-loading').classList.add('hidden');
+  $('v-main').classList.remove('hidden');
+}
+
+init();
+</script>
+</body>
+</html>

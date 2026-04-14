@@ -22,7 +22,9 @@ async def cmd_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     uid = update.effective_user.id
     client = api_client(context)
     if client is None:
-        await reply_text(update, context, "Режим проверки без сервера (BOT_DRY_RUN=1).", reply_markup=main_menu(False))
+        cfg = context.bot_data.get("cfg")
+        mini = cfg.miniapp_url if cfg else ""
+        await reply_text(update, context, "Режим проверки без сервера (BOT_DRY_RUN=1).", reply_markup=main_menu(False, mini))
         return
     try:
         status, data = await client.issue_history(user_id_for_api(uid), limit=10)

@@ -48,7 +48,6 @@ def main() -> None:
     app.bot_data["allowed_ids"] = cfg.allowed_telegram_ids
     app.bot_data["admin_ids"] = cfg.admin_telegram_ids
     app.bot_data["profile_ids"] = cfg.vpn_profile_ids
-    app.bot_data["qr_enabled"] = cfg.qr_enabled
     app.bot_data["payment_provider_token"] = cfg.payment_provider_token
     app.bot_data["payment_currency"] = cfg.payment_currency
     app.bot_data["payment_plans"] = cfg.payment_plans
@@ -68,8 +67,9 @@ def main() -> None:
         await q.answer()
         data = (q.data or "").strip()
         uid = update.effective_user.id if update.effective_user else 0
+        cfg = context.bot_data["cfg"]
         if data in ("menu", "cancel"):
-            await reply_text(update, context, "Ок.", reply_markup=main_menu(is_admin(context, uid)))
+            await reply_text(update, context, "Ок.", reply_markup=main_menu(is_admin(context, uid), cfg.miniapp_url))
             return
         if data == "help":
             await start_handlers.cmd_help(update, context)
@@ -109,7 +109,7 @@ def main() -> None:
         if data == "admin":
             await admin_handlers.cmd_admin(update, context)
             return
-        await reply_text(update, context, "Неизвестная команда.", reply_markup=main_menu(is_admin(context, uid)))
+        await reply_text(update, context, "Неизвестная команда.", reply_markup=main_menu(is_admin(context, uid), cfg.miniapp_url))
 
     async def on_precheckout(update: Update, _context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.pre_checkout_query:

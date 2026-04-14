@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import httpx
-from telegram import InputFile, Update
+from telegram import Update
 from telegram.ext import ContextTypes
 
 from handlers.common import (
@@ -13,7 +13,7 @@ from handlers.common import (
     reply_text,
 )
 from keyboards import back_to_menu, subscribe_choice
-from utils import generate_qr, user_id_for_api
+from utils import user_id_for_api
 
 
 async def cmd_subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -65,14 +65,6 @@ async def cmd_subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     url = str(data.get("url") or "").strip()
     if url:
         await reply_text(update, context, f"Подписка выдана.\n\nСсылка:\n{url}", reply_markup=back_to_menu())
-        qr_enabled: bool = bool(context.bot_data.get("qr_enabled"))
-        if qr_enabled and update.effective_chat:
-            png = generate_qr(url)
-            await context.bot.send_photo(
-                chat_id=update.effective_chat.id,
-                photo=InputFile(png, filename="subscription.png"),
-                caption="QR-код для ссылки подписки",
-            )
         return
     await reply_text(update, context, "Подписка выдана, но ссылка не пришла (проверьте public base URL на сервере).", reply_markup=back_to_menu())
 

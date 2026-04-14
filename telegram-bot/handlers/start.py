@@ -12,12 +12,14 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if await deny_if_not_allowed(update, context):
         return
     uid = update.effective_user.id if update.effective_user else 0
-    await update.message.reply_text(START_TEXT, reply_markup=main_menu(is_admin(context, uid)))
+    cfg = context.bot_data["cfg"]
+    await update.message.reply_text(START_TEXT, reply_markup=main_menu(is_admin(context, uid), cfg.miniapp_url))
 
 
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if await deny_if_not_allowed(update, context):
         return
     uid = update.effective_user.id if update.effective_user else 0
-    await update.message.reply_text(HELP_TEXT, reply_markup=main_menu(is_admin(context, uid)))
+    cfg = context.bot_data["cfg"]
+    await update.message.reply_text(HELP_TEXT, reply_markup=main_menu(is_admin(context, uid), cfg.miniapp_url))
 

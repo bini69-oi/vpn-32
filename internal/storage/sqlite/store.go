@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	// Register modernc sqlite driver.
@@ -457,10 +458,14 @@ func (s *Store) CreateSubscription(ctx context.Context, item domain.Subscription
 	}
 	tokenHash := hashToken(item.Token)
 	item.TokenHint = tokenHint(item.Token)
+	tokenSecret := ""
+	if sealed, err := sealSubscriptionToken(item.Token); err == nil {
+		tokenSecret = sealed
+	}
 	_, err = s.db.ExecContext(
 		ctx,
-		`INSERT INTO subscriptions(id, name, user_id, token, token_hash, token_hint, profile_ids_json, status, revoked, revoked_at, rotated_at, rotation_count, last_access_at, expires_at, created_at, updated_at)
-		 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO subscriptions(id, name, user_id, token, token_hash, token_hint, profile_ids_json, status, revoked, revoked_at, rotated_at, rotation_count, last_access_at, expires_at, created_at, updated_at, token_secret)
+		 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		item.ID,
 		item.Name,
 		item.UserID,
@@ -477,6 +482,7 @@ func (s *Store) CreateSubscription(ctx context.Context, item domain.Subscription
 		timeToText(item.ExpiresAt),
 		item.CreatedAt.UTC().Format(time.RFC3339Nano),
 		item.UpdatedAt.UTC().Format(time.RFC3339Nano),
+		tokenSecret,
 	)
 	if err != nil {
 		return domain.Subscription{}, dbErr("create_subscription_insert", err)
@@ -664,12 +670,17 @@ func (s *Store) ReactivateSubscription(ctx context.Context, id string, expiresAt
 
 func (s *Store) RotateSubscriptionToken(ctx context.Context, id, token string) (domain.Subscription, error) {
 	now := time.Now().UTC().Format(time.RFC3339Nano)
+	tokenSecret := ""
+	if sealed, err := sealSubscriptionToken(token); err == nil {
+		tokenSecret = sealed
+	}
 	_, err := s.db.ExecContext(
 		ctx,
 		`UPDATE subscriptions
 		 SET token = '__hashed__:' || id,
 		     token_hash = ?,
 		     token_hint = ?,
+		     token_secret = ?,
 		     status = 'active',
 		     revoked = 0,
 		     revoked_at = NULL,
@@ -679,6 +690,7 @@ func (s *Store) RotateSubscriptionToken(ctx context.Context, id, token string) (
 		 WHERE id = ?`,
 		hashToken(token),
 		tokenHint(token),
+		tokenSecret,
 		now,
 		now,
 		id,
@@ -687,6 +699,25 @@ func (s *Store) RotateSubscriptionToken(ctx context.Context, id, token string) (
 		return domain.Subscription{}, dbErr("rotate_subscription", err)
 	}
 	return s.GetSubscription(ctx, id)
+}
+
+func (s *Store) GetSubscriptionSecretToken(ctx context.Context, id string) (string, error) {
+	var enc string
+	err := s.db.QueryRowContext(ctx, `SELECT COALESCE(token_secret,'') FROM subscriptions WHERE id = ?`, id).Scan(&enc)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", profile.ErrNotFound
+		}
+		return "", dbErr("get_subscription_secret_token", err)
+	}
+	if strings.TrimSpace(enc) == "" {
+		return "", profile.ErrNotFound
+	}
+	plain, err := openSubscriptionToken(enc)
+	if err != nil {
+		return "", dbErr("open_subscription_secret_token", err)
+	}
+	return plain, nil
 }
 
 func (s *Store) TouchSubscriptionAccess(ctx context.Context, id string) error {

@@ -68,3 +68,7 @@ var/
 
 # Telegram bot local secrets
 telegram-bot/.env
+
+# Node mini-app
+telegram-miniapp/node_modules/
+telegram-miniapp/.env

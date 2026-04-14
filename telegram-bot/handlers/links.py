@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import httpx
-from telegram import InputFile, Update
+from telegram import Update
 from telegram.ext import ContextTypes
 
 from handlers.common import api_client, api_error_message, deny_if_not_allowed, handle_request_error, reply_text
 from keyboards import back_to_menu
-from utils import generate_qr, user_profile_id
+from utils import user_profile_id
 
 
 async def cmd_links(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -33,10 +33,6 @@ async def cmd_links(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     else:
         items = {}
 
-    primary = ""
-    if isinstance(items.get("primary"), str):
-        primary = items["primary"].strip()
-
     lines = [
         f"🌐 Профиль: {pid}",
         "",
@@ -57,13 +53,4 @@ async def cmd_links(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
     await reply_text(update, context, "\n".join(lines), reply_markup=back_to_menu())
-
-    qr_enabled: bool = bool(context.bot_data.get("qr_enabled"))
-    if qr_enabled and primary and update.effective_chat:
-        png = generate_qr(primary)
-        await context.bot.send_photo(
-            chat_id=update.effective_chat.id,
-            photo=InputFile(png, filename="primary.png"),
-            caption="QR-код для primary ссылки",
-        )
 

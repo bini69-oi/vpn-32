@@ -1,0 +1,19 @@
+[Unit]
+Description=VPN Telegram Mini App (Express + static)
+After=network-online.target vpn-productd.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=vpn-product
+Group=vpn-product
+# Adjust to your checkout path (must contain bot/index.js and webapp/).
+WorkingDirectory=/opt/vpn-product/src/telegram-miniapp
+EnvironmentFile=-/etc/vpn-product/vpn-tg-miniapp.env
+ExecStart=/usr/bin/node bot/index.js
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

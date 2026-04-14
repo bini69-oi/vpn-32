@@ -113,6 +113,9 @@ func (s *Store) migrate(ctx context.Context) error {
 	if err := s.ensureColumn(ctx, "subscriptions", "rotation_count", "INTEGER NOT NULL DEFAULT 0"); err != nil {
 		return err
 	}
+	if err := s.ensureColumn(ctx, "subscriptions", "token_secret", "TEXT"); err != nil {
+		return err
+	}
 	if _, err := s.db.ExecContext(
 		ctx,
 		`UPDATE subscriptions

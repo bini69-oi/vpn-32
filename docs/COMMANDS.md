@@ -191,3 +191,17 @@ pip install -r requirements.txt
 python bot.py
 ```
 
+Set `TELEGRAM_MINIAPP_URL` in `telegram-bot/.env` to the **same HTTPS origin** as the Mini App (`WEBAPP_URL` in `telegram-miniapp/.env`). The Python bot adds a **WebApp** menu button; the Node process is normally **API + static only** (no second bot polling unless `START_TELEGRAM_BOT_POLLING=1`).
+
+### Mini App (`telegram-miniapp/`)
+
+```bash
+cd telegram-miniapp
+npm install
+cp .env.example .env
+# BOT_TOKEN (same bot as Python), VPN_API_URL, VPN_ADMIN_TOKEN (= VPN_PRODUCT_API_TOKEN), WEBAPP_URL=https://...
+npm start
+```
+
+Production: install `deploy/systemd/vpn-tg-miniapp.service`, put env in `/etc/vpn-product/vpn-tg-miniapp.env`, reverse-proxy HTTPS (Caddy) to `PORT`. On `vpn-productd` set `VPN_PRODUCT_PUBLIC_BASE_URL` and `VPN_PRODUCT_SUBSCRIPTION_TOKEN_KEY` so `/admin/user/tg_…/status` can return `subUrl` for new or rotated subscriptions.
+

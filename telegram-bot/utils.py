@@ -3,9 +3,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from io import BytesIO
-
-import qrcode
 
 
 def format_bytes(n: int | float) -> str:
@@ -51,17 +48,6 @@ def progress_bar(used: int, total: int, width: int = 18) -> str:
     bar = "▓" * filled + "░" * (width - filled)
     pct = int(round(ratio * 100))
     return f"{bar} {pct}%"
-
-
-def generate_qr(data: str) -> BytesIO:
-    qr = qrcode.QRCode(border=2, box_size=6)
-    qr.add_data(data)
-    qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
-    buf = BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-    return buf
 
 
 def parse_api_datetime(raw: str | None) -> datetime | None:

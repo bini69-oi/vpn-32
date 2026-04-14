@@ -28,6 +28,7 @@ type Repository interface {
 	TouchSubscriptionAccess(ctx context.Context, id string) error
 	UpdateSubscriptionProfiles(ctx context.Context, id string, profileIDs []string) error
 	CleanupExpired(ctx context.Context, retentionDays int, staleDays int) (deleted int64, revokedStale int64, err error)
+	GetSubscriptionSecretToken(ctx context.Context, subscriptionID string) (string, error)
 }
 
 type ProfileProvider interface {
@@ -248,6 +249,22 @@ func (s *Service) GetActiveByUser(ctx context.Context, userID string) (domain.Su
 		return domain.Subscription{}, errors.New("userId is required")
 	}
 	return s.repo.GetActiveSubscriptionByUser(ctx, userID)
+}
+
+func (s *Service) GetLastByUser(ctx context.Context, userID string) (domain.Subscription, error) {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return domain.Subscription{}, errors.New("userId is required")
+	}
+	return s.repo.GetLastSubscriptionByUser(ctx, userID)
+}
+
+func (s *Service) RevealSubscriptionToken(ctx context.Context, subscriptionID string) (string, error) {
+	subscriptionID = strings.TrimSpace(subscriptionID)
+	if subscriptionID == "" {
+		return "", errors.New("subscriptionId is required")
+	}
+	return s.repo.GetSubscriptionSecretToken(ctx, subscriptionID)
 }
 
 func (s *Service) ExtendActiveByUser(ctx context.Context, userID string, days int) (domain.Subscription, error) {

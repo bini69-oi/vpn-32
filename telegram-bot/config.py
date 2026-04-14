@@ -25,7 +25,6 @@ class BotConfig:
     admin_telegram_ids: set[int]
 
     rate_limit_seconds: int
-    qr_enabled: bool
 
     payment_provider_token: str
     payment_currency: str
@@ -36,6 +35,9 @@ class BotConfig:
     loki_tags: str
     loki_username: str
     loki_password: str
+
+    # HTTPS URL of the Mini App (same host as Express in telegram-miniapp/). Adds a WebApp button in the menu.
+    miniapp_url: str
 
 
 def _env_truthy(name: str) -> bool:
@@ -114,8 +116,6 @@ def load_config() -> BotConfig:
     if rate_limit_seconds <= 0:
         rate_limit_seconds = 60
 
-    qr_enabled = _env_truthy("QR_ENABLED")
-
     payment_provider_token = os.environ.get("PAYMENT_PROVIDER_TOKEN", "").strip()
     payment_currency = os.environ.get("PAYMENT_CURRENCY", "RUB").strip() or "RUB"
     payment_plans = _parse_plans(os.environ.get("PAYMENT_PLANS", ""))
@@ -130,7 +130,6 @@ def load_config() -> BotConfig:
         allowed_telegram_ids=allowed,
         admin_telegram_ids=admins,
         rate_limit_seconds=rate_limit_seconds,
-        qr_enabled=qr_enabled,
         payment_provider_token=payment_provider_token,
         payment_currency=payment_currency,
         payment_plans=payment_plans,
@@ -139,5 +138,6 @@ def load_config() -> BotConfig:
         loki_tags=os.environ.get("LOKI_TAGS", "").strip(),
         loki_username=os.environ.get("LOKI_USERNAME", "").strip(),
         loki_password=os.environ.get("LOKI_PASSWORD", "").strip(),
+        miniapp_url=os.environ.get("TELEGRAM_MINIAPP_URL", "").strip(),
     )
 

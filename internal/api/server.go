@@ -61,6 +61,8 @@ type SubscriptionService interface {
 	ExtendActiveByUser(ctx context.Context, userID string, days int) (domain.Subscription, error)
 	BlockActiveByUser(ctx context.Context, userID string) (domain.Subscription, error)
 	CleanupExpired(ctx context.Context, retentionDays int, staleDays int) (deleted int64, revokedStale int64, err error)
+	GetLastByUser(ctx context.Context, userID string) (domain.Subscription, error)
+	RevealSubscriptionToken(ctx context.Context, subscriptionID string) (string, error)
 }
 
 type Server struct {
@@ -186,6 +188,7 @@ func (s *Server) Handler() http.Handler {
 	admin.HandleFunc("/admin/profiles/", s.handleProfileScoped)
 	admin.HandleFunc("/admin/subscriptions", s.handleSubscriptions)
 	admin.HandleFunc("/admin/subscriptions/", s.handleSubscriptionScoped)
+	admin.HandleFunc("/admin/user/", s.handleAdminUser)
 	admin.HandleFunc("/admin/delivery/links", s.handleDeliveryLinks)
 	admin.HandleFunc("/admin/health", s.handleHealth)
 	admin.HandleFunc("/admin/readiness", s.handleReadiness)
@@ -212,6 +215,7 @@ func (s *Server) Handler() http.Handler {
 	admin.HandleFunc("/v1/profiles/", s.handleProfileScoped)
 	admin.HandleFunc("/v1/subscriptions", s.handleSubscriptions)
 	admin.HandleFunc("/v1/subscriptions/", s.handleSubscriptionScoped)
+	admin.HandleFunc("/v1/user/", s.handleAdminUser)
 	admin.HandleFunc("/v1/issue/link", s.handleIssueLink)
 	admin.HandleFunc("/v1/issue/history", s.handleIssueHistory)
 	admin.HandleFunc("/v1/issue/status", s.handleIssueStatus)

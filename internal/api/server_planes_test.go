@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/xtls/xray-core/internal/domain"
 	"github.com/xtls/xray-core/internal/health"
 	"github.com/xtls/xray-core/internal/logging"
+	profilepkg "github.com/xtls/xray-core/internal/profile"
 )
 
 type fakeSubs struct {
@@ -109,11 +111,11 @@ func (f *fakeSubs) GetActiveByUser(_ context.Context, userID string) (domain.Sub
 	if f.item.UserID == userID {
 		return f.item, nil
 	}
-	return domain.Subscription{}, context.Canceled
+	return domain.Subscription{}, profilepkg.ErrNotFound
 }
 func (f *fakeSubs) ExtendActiveByUser(_ context.Context, userID string, _ int) (domain.Subscription, error) {
 	if f.item.UserID != userID {
-		return domain.Subscription{}, context.Canceled
+		return domain.Subscription{}, profilepkg.ErrNotFound
 	}
 	t := time.Now().UTC().Add(30 * 24 * time.Hour)
 	f.item.ExpiresAt = &t
@@ -121,11 +123,23 @@ func (f *fakeSubs) ExtendActiveByUser(_ context.Context, userID string, _ int) (
 }
 func (f *fakeSubs) BlockActiveByUser(_ context.Context, userID string) (domain.Subscription, error) {
 	if f.item.UserID != userID {
-		return domain.Subscription{}, context.Canceled
+		return domain.Subscription{}, profilepkg.ErrNotFound
 	}
 	f.item.Revoked = true
 	f.item.Status = "revoked"
 	return f.item, nil
+}
+func (f *fakeSubs) GetLastByUser(_ context.Context, userID string) (domain.Subscription, error) {
+	if f.item.UserID == userID {
+		return f.item, nil
+	}
+	return domain.Subscription{}, profilepkg.ErrNotFound
+}
+func (f *fakeSubs) RevealSubscriptionToken(_ context.Context, subscriptionID string) (string, error) {
+	if f.item.ID == subscriptionID && strings.TrimSpace(f.item.Token) != "" {
+		return f.item.Token, nil
+	}
+	return "", profilepkg.ErrNotFound
 }
 func (f *fakeSubs) CleanupExpired(_ context.Context, _ int, _ int) (int64, int64, error) {
 	return 0, 0, nil
