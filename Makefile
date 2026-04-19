@@ -2,7 +2,7 @@ PYTHON ?= python3
 BOT_DIR := apps/telegram-shop
 COMPOSE ?= docker compose
 
-.PHONY: help bot-up bot-down bot-logs bot-pull bot-restart bot-ps secret-scan verify ci clean
+.PHONY: help bot-up bot-down bot-logs bot-pull bot-restart bot-ps bot-export-audit secret-scan verify ci clean
 
 help:
 	@echo "VPN Product (Remnawave + готовый Telegram-shop бот) — Makefile"
@@ -13,6 +13,7 @@ help:
 	@echo "  make bot-pull       — docker compose pull + up -d (обновление образа)"
 	@echo "  make bot-restart    — перезапуск бота без обновления"
 	@echo "  make bot-ps         — статус контейнеров бота"
+	@echo "  make bot-export-audit — CSV+лог в apps/telegram-shop/logs/ (оплаты, рефералы, лента)"
 	@echo "  make secret-scan    — поиск утечек секретов в репо"
 	@echo "  make verify         — всё, что гоняет CI (secret-scan + compose config)"
 
@@ -35,6 +36,9 @@ bot-restart:
 
 bot-ps:
 	cd $(BOT_DIR) && $(COMPOSE) ps
+
+bot-export-audit:
+	cd $(BOT_DIR) && bash scripts/export_audit_log.sh
 
 secret-scan:
 	$(PYTHON) scripts/secret_scan.py

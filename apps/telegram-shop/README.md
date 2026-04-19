@@ -104,6 +104,28 @@ docker compose logs -f bot
 
 Полезные события: `referral created`, `Granted referral bonus`, `purchase processed`, ошибки платежей и Remnawave.
 
+### Таблицы в файлах (CSV) — оплаты, рефералы, лента событий
+
+Образ бота **не пишет** отдельный `.log` в папку проекта: всё идёт в Docker. Чтобы открыть **понятную таблицу в файле** (Excel / Numbers / LibreOffice), выгружай данные из Postgres бота:
+
+```bash
+cd apps/telegram-shop
+bash scripts/export_audit_log.sh
+```
+
+Или из корня репозитория: `make bot-export-audit`.
+
+Появятся файлы в **`apps/telegram-shop/logs/`**:
+
+| Файл | Содержимое |
+|------|------------|
+| `latest_export_purchases.csv` | Все записи `purchase` + `buyer_telegram_id` |
+| `latest_export_referrals.csv` | Рефералы: пригласивший / приглашённый / `bonus_granted` / число успешных оплат приглашённого |
+| `latest_export_timeline.csv` | Объединённая лента: покупки + приглашения по реф-ссылке |
+| `latest_docker_bot.log` | Последние ~5000 строк **сырого** лога контейнера `bot` |
+
+Рядом сохраняются копии с меткой времени (`*_2026…csv`), чтобы не затирать историю. Папка `logs/*.csv` и `logs/docker_bot_*.log` в `.gitignore` — в git не коммитятся.
+
 ### SQL для админской статистики (Postgres бота)
 
 Подключиться к БД контейнера (`POSTGRES_*` из `.env`):
