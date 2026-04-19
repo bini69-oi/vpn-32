@@ -16,6 +16,13 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+# `vpn_bot.config.settings` instantiates a module-level `settings = Settings()`
+# at import time, which requires BOT_TOKEN. On CI there is no `.env` file next
+# to the package, so we seed a dummy token before any test module is imported.
+# Conftest files are loaded by pytest before collecting tests in the same dir,
+# so this runs early enough to cover every import path.
+os.environ.setdefault("BOT_TOKEN", "123:stub")
+
 
 @pytest.fixture(autouse=True)
 def _isolate_env(monkeypatch: pytest.MonkeyPatch) -> None:
