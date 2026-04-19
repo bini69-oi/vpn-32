@@ -18,9 +18,16 @@
 
 ### Чего ещё нет (будет в следующих этапах)
 
-- Telegram-бот
-- Оплата/платёжная интеграция
-- Миграция старых пользователей/данных
+- Оплата/платёжная интеграция (привязка к биллингу Remnawave)
+- Миграция старых пользователей/данных из vpn-productd
+
+### Telegram-бот и Remnawave
+
+В **`apps/vpn-telegram-bot/`** включён режим **`VPN_BACKEND=remnawave`**: бот ходит в Panel REST API (`/api/users`, `/api/system/health`, …) по [community Python SDK](https://github.com/remnawave/python-sdk) / официальным путям.
+
+Переменные: см. `apps/vpn-telegram-bot/.env.example` (`REMNAWAVE_PANEL_URL`, `REMNAWAVE_API_TOKEN`, `REMNAWAVE_INTERNAL_SQUAD_UUIDS`, опционально `REMNAWAVE_CADDY_TOKEN`).
+
+Режим по умолчанию **`VPN_BACKEND=productd`** — прежнее поведение с `VPN_API_URL` / `VPN_API_TOKEN`.
 
 ### Где смотреть инструкции деплоя
 

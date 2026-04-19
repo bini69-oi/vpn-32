@@ -191,6 +191,17 @@ pip install -r requirements.txt
 python -m vpn_bot
 ```
 
+Remnawave: set `VPN_BACKEND=remnawave` plus `REMNAWAVE_PANEL_URL`, `REMNAWAVE_API_TOKEN`, and `REMNAWAVE_INTERNAL_SQUAD_UUIDS` (see `apps/vpn-telegram-bot/.env.example`). Default backend remains **vpn-productd** (`VPN_API_URL` / `VPN_API_TOKEN`).
+
+Tests (Makefile targets from repo root):
+
+```bash
+make bot-venv   # one-time: create .venv and install requirements + requirements-dev
+make bot-test   # run pytest (Remnawave + productd backends, settings, handlers)
+```
+
+CI runs `pytest` automatically on every push and pull request (see `.github/workflows/ci.yml`, job `bot-tests`).
+
 The legacy `python-telegram-bot` tree is preserved under `archive/telegram-bot-legacy/`.
 
 For the Mini App, set the **Menu Button / Mini App URL** in @BotFather to the **same HTTPS origin** as `WEBAPP_URL` in `apps/telegram-miniapp/.env`. The Node process is normally **API + static only** (no second bot polling unless `START_TELEGRAM_BOT_POLLING=1`). Extend `apps/vpn-telegram-bot` if you want an inline **WebApp** keyboard button.

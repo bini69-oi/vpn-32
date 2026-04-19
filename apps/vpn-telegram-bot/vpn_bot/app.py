@@ -17,13 +17,37 @@ from vpn_bot.database.db import init_db
 from vpn_bot.handlers import admin, purchase, referral, start, subscription, support
 from vpn_bot.middlewares.auth import AuthMiddleware
 from vpn_bot.middlewares.throttling import ThrottlingMiddleware
-from vpn_bot.services.api_client import VPNApiClient
+from vpn_bot.services.api_client import VPNApiClient, VPNBackend
+from vpn_bot.services.remnawave_client import RemnawaveApiClient
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
 )
 log = logging.getLogger(__name__)
+
+
+def _build_backend_client(session: aiohttp.ClientSession) -> VPNBackend | None:
+    if settings.vpn_backend_normalized() == "remnawave":
+        if not settings.remnawave_api_token.strip() or not settings.remnawave_panel_url.strip():
+            log.warning("VPN_BACKEND=remnawave: задай REMNAWAVE_API_TOKEN и REMNAWAVE_PANEL_URL")
+            return None
+        squads = settings.remnawave_internal_squad_uuids()
+        if not squads:
+            log.warning(
+                "VPN_BACKEND=remnawave: REMNAWAVE_INTERNAL_SQUAD_UUIDS пусто — создание пользователя в панели не удастся",
+            )
+        return RemnawaveApiClient(
+            session,
+            settings.remnawave_panel_url,
+            settings.remnawave_api_token,
+            caddy_token=settings.remnawave_caddy_token,
+            internal_squad_uuids=squads,
+        )
+    if settings.vpn_api_token.strip():
+        return VPNApiClient(session, settings.vpn_api_url, settings.vpn_api_token)
+    return None
+
 
 _GET_ME_ATTEMPTS = 5
 _GET_ME_DELAYS_SEC = (1.5, 3.0, 5.0, 8.0)
@@ -63,11 +87,9 @@ async def main() -> None:
     vpn_session = aiohttp.ClientSession()
     tg_session = AiohttpSession(proxy=proxy or None) if proxy else AiohttpSession()
 
-    api: VPNApiClient | None = None
-    if settings.vpn_api_token.strip():
-        api = VPNApiClient(vpn_session, settings.vpn_api_url, settings.vpn_api_token)
-    else:
-        log.warning("VPN_API_TOKEN empty — API calls disabled")
+    api = _build_backend_client(vpn_session)
+    if api is None:
+        log.warning("Backend API не настроен — выдача VPN из бота недоступна")
 
     bot = Bot(
         token=settings.bot_token,

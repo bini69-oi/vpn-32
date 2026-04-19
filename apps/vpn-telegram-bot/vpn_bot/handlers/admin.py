@@ -12,7 +12,7 @@ from aiogram.types import CallbackQuery, Message
 
 from vpn_bot.config import settings
 from vpn_bot.keyboards.admin_kb import admin_menu_kb, broadcast_confirm_kb, monitoring_kb
-from vpn_bot.services.api_client import VPNApiClient
+from vpn_bot.services.api_client import VPNBackend
 from vpn_bot.services.monitoring_service import format_health_report
 from vpn_bot.utils import texts
 
@@ -49,7 +49,7 @@ async def cb_admin_menu(query: CallbackQuery) -> None:
 
 
 @router.callback_query(F.data == "mon_refresh")
-async def cb_mon_refresh(query: CallbackQuery, api: VPNApiClient | None) -> None:
+async def cb_mon_refresh(query: CallbackQuery, api: VPNBackend | None) -> None:
     await query.answer()
     if not query.from_user or not _is_admin(query.from_user.id):
         return
@@ -57,7 +57,16 @@ async def cb_mon_refresh(query: CallbackQuery, api: VPNApiClient | None) -> None
         await query.message.answer(texts.service_unavailable()) if query.message else None
         return
     st, data = await api.get_health()
-    body = format_health_report(st, data if isinstance(data, dict) else {"data": data})
+    mon_title = (
+        "📊 <b>Состояние Remnawave Panel</b>"
+        if settings.vpn_backend_normalized() == "remnawave"
+        else None
+    )
+    body = format_health_report(
+        st,
+        data if isinstance(data, dict) else {"data": data},
+        title=mon_title,
+    )
     if query.message:
         await query.message.edit_text(body, reply_markup=monitoring_kb())
 

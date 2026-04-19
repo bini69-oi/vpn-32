@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     )
     allowed_ids_csv: str = Field(default="", validation_alias="ALLOWED_TELEGRAM_IDS")
 
+    # productd (по умолчанию) или remnawave — см. VPN_BACKEND
     vpn_api_url: str = Field(
         default="http://127.0.0.1:8080",
         validation_alias=AliasChoices("VPN_API_URL", "VPN_PRODUCT_BASE_URL"),
@@ -58,6 +59,22 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("VPN_API_TOKEN", "VPN_PRODUCT_API_TOKEN"),
     )
     vpn_profile_ids_raw: str = Field(default="", validation_alias="VPN_PROFILE_IDS")
+
+    # --- Remnawave Panel API (https://docs.rw + community SDK пути /api/users …) ---
+    vpn_backend: str = Field(default="productd", validation_alias="VPN_BACKEND")
+    remnawave_panel_url: str = Field(
+        default="",
+        validation_alias=AliasChoices("REMNAWAVE_PANEL_URL", "REMNAWAVE_BASE_URL"),
+    )
+    remnawave_api_token: str = Field(default="", validation_alias="REMNAWAVE_API_TOKEN")
+    remnawave_caddy_token: str = Field(default="", validation_alias="REMNAWAVE_CADDY_TOKEN")
+    remnawave_internal_squads_raw: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "REMNAWAVE_INTERNAL_SQUAD_UUIDS",
+            "REMNAWAVE_INTERNAL_SQUAD_UUID",
+        ),
+    )
 
     database_path: str = Field(default="data/bot.db", validation_alias="DATABASE_PATH")
 
@@ -121,6 +138,18 @@ class Settings(BaseSettings):
 
     def profile_ids(self) -> list[str] | None:
         return _parse_profile_ids(self.vpn_profile_ids_raw)
+
+    def vpn_backend_normalized(self) -> str:
+        v = (self.vpn_backend or "productd").strip().lower()
+        return v if v in ("productd", "remnawave") else "productd"
+
+    def remnawave_internal_squad_uuids(self) -> list[str]:
+        return [p.strip() for p in (self.remnawave_internal_squads_raw or "").split(",") if p.strip()]
+
+    def api_configured(self) -> bool:
+        if self.vpn_backend_normalized() == "remnawave":
+            return bool(self.remnawave_api_token.strip() and self.remnawave_panel_url.strip())
+        return bool(self.vpn_api_token.strip())
 
     def database_file(self) -> Path:
         p = Path(self.database_path)

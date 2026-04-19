@@ -166,6 +166,45 @@ func TestAdminAndPublicRouteSeparation(t *testing.T) {
 	require.Contains(t, rec.Body.String(), "vless://")
 }
 
+func TestPublicSubscriptionEmitsHappHideSettings(t *testing.T) {
+	logger, err := logging.New("")
+	require.NoError(t, err)
+	conn := fakeConn{}
+	profiles := fakeProfiles{}
+	diag := diagnostics.NewService(conn, health.StaticProber{Default: health.ProbeResult{Healthy: true}}, profiles, fakeDBChecker{}, t.TempDir())
+	subs := &fakeSubs{item: domain.Subscription{ID: "sub-1", Token: "tok-1", ProfileIDs: []string{"p1"}, Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}}
+	h := NewServer(conn, profiles, diag, "token", logger, nil, subs).Handler()
+
+	t.Setenv("VPN_PRODUCT_HAPP_SUPPORT_URL", "https://t.me/example_support")
+	t.Setenv("VPN_PRODUCT_HAPP_UPDATE_INTERVAL_HOURS", "12")
+
+	req := httptest.NewRequest(http.MethodGet, "/public/subscriptions/tok-1", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, "1", rec.Header().Get("hide-settings"))
+	require.Equal(t, "https://t.me/example_support", rec.Header().Get("support-url"))
+	require.Equal(t, "12", rec.Header().Get("profile-update-interval"))
+}
+
+func TestPublicSubscriptionHideSettingsCanBeDisabled(t *testing.T) {
+	logger, err := logging.New("")
+	require.NoError(t, err)
+	conn := fakeConn{}
+	profiles := fakeProfiles{}
+	diag := diagnostics.NewService(conn, health.StaticProber{Default: health.ProbeResult{Healthy: true}}, profiles, fakeDBChecker{}, t.TempDir())
+	subs := &fakeSubs{item: domain.Subscription{ID: "sub-1", Token: "tok-1", ProfileIDs: []string{"p1"}, Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}}
+	h := NewServer(conn, profiles, diag, "token", logger, nil, subs).Handler()
+
+	t.Setenv("VPN_PRODUCT_HAPP_HIDE_SETTINGS", "0")
+
+	req := httptest.NewRequest(http.MethodGet, "/public/subscriptions/tok-1", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Empty(t, rec.Header().Get("hide-settings"))
+}
+
 func TestSubscriptionLifecycleEndpoints(t *testing.T) {
 	logger, err := logging.New("")
 	require.NoError(t, err)

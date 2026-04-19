@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import Any, Protocol
 
 import aiohttp
 
@@ -99,3 +99,28 @@ class VPNApiClient:
 
     async def get_profile_stats(self) -> tuple[int, dict[str, Any]]:
         return await self._request("GET", "/v1/stats/profiles")
+
+
+class VPNBackend(Protocol):
+    """Общий контракт: vpn-productd (VPNApiClient) или Remnawave (RemnawaveApiClient)."""
+
+    async def issue_status(self, user_id: str) -> tuple[int, dict[str, Any]]: ...
+
+    async def issue_link(
+        self,
+        user_id: str,
+        name: str,
+        source: str,
+        profile_ids: list[str] | None,
+        idempotency_key: str | None,
+    ) -> tuple[int, dict[str, Any]]: ...
+
+    async def lifecycle_renew(self, user_id: str, days: int) -> tuple[int, dict[str, Any]]: ...
+
+    async def get_subscription(self, subscription_id: str) -> tuple[int, dict[str, Any]]: ...
+
+    async def get_delivery_links(self, profile_id: str) -> tuple[int, dict[str, Any]]: ...
+
+    async def get_health(self) -> tuple[int, dict[str, Any]]: ...
+
+    async def get_profile_stats(self) -> tuple[int, dict[str, Any]]: ...

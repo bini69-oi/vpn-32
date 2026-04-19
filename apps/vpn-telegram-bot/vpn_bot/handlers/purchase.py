@@ -14,7 +14,7 @@ from vpn_bot.keyboards.purchase_kb import (
     plans_keyboard,
     sbp_pay_flow_keyboard,
 )
-from vpn_bot.services.api_client import VPNApiClient
+from vpn_bot.services.api_client import VPNBackend
 from vpn_bot.services.payment_service import confirm_payment, create_pending_payment
 from vpn_bot.services.referral_service import finalize_referral_after_payment, get_referrer_for_payment_bonus
 from vpn_bot.services.subscription_service import vpn_user_id
@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 router = Router(name="purchase")
 
 
-async def _apply_paid_months(api: VPNApiClient, telegram_user_id: int, months: int) -> tuple[bool, str]:
+async def _apply_paid_months(api: VPNBackend, telegram_user_id: int, months: int) -> tuple[bool, str]:
     uid = vpn_user_id(telegram_user_id)
     st, _ = await api.issue_status(uid)
     if st == 404:
@@ -156,7 +156,7 @@ async def pre_checkout(pq: PreCheckoutQuery) -> None:
 
 
 @router.message(F.successful_payment)
-async def on_successful_payment(message: Message, api: VPNApiClient | None, db) -> None:
+async def on_successful_payment(message: Message, api: VPNBackend | None, db) -> None:
     sp = message.successful_payment
     if not sp or not message.from_user or api is None:
         return
@@ -216,7 +216,7 @@ async def cb_confirm_paid(query: CallbackQuery, db, api) -> None:
 
 
 @router.callback_query(F.data.startswith("admin_confirm_"))
-async def cb_admin_confirm(query: CallbackQuery, api: VPNApiClient | None, db) -> None:
+async def cb_admin_confirm(query: CallbackQuery, api: VPNBackend | None, db) -> None:
     if not query.from_user or query.from_user.id not in settings.admin_ids():
         await query.answer("Нет прав", show_alert=True)
         return

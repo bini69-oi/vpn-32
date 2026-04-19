@@ -15,7 +15,7 @@ COVERPKGS ?= ./internal/configgen ./internal/connection
 LINT_TARGETS ?= ./internal/... $(CMD_PKGS)
 ALL_GO_PKGS ?= ./...
 
-.PHONY: test test-all bench build lint cover verify verify-quick secret-scan ci bot bot-venv
+.PHONY: test test-all bench build lint cover verify verify-quick secret-scan ci bot bot-venv bot-test
 
 build:
 	$(GO) build -trimpath -ldflags="-s -w" -o vpn-productd ./cmd/vpn-productd
@@ -59,8 +59,14 @@ ci: verify
 
 # Telegram-бот (aiogram) — apps/vpn-telegram-bot/
 bot-venv:
-	cd apps/vpn-telegram-bot && $(PYTHON) -m venv .venv && ./.venv/bin/pip install -U pip && ./.venv/bin/pip install -r requirements.txt
+	cd apps/vpn-telegram-bot && $(PYTHON) -m venv .venv && ./.venv/bin/pip install -U pip \
+		&& ./.venv/bin/pip install -r requirements.txt \
+		&& ./.venv/bin/pip install -r requirements-dev.txt
 
 bot:
 	@test -f apps/vpn-telegram-bot/.venv/bin/python || (echo "Сначала выполни: make bot-venv" && exit 1)
 	cd apps/vpn-telegram-bot && ./.venv/bin/python -m vpn_bot
+
+bot-test:
+	@test -f apps/vpn-telegram-bot/.venv/bin/python || (echo "Сначала выполни: make bot-venv" && exit 1)
+	cd apps/vpn-telegram-bot && ./.venv/bin/python -m pytest -q

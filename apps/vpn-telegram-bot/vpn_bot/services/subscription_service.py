@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from vpn_bot.services.api_client import VPNApiClient
+from vpn_bot.services.api_client import VPNBackend
 
 
 def vpn_user_id(telegram_user_id: int) -> str:
@@ -13,7 +13,7 @@ def delivery_profile_id(telegram_user_id: int) -> str:
     return f"user-tg-{telegram_user_id}"
 
 
-async def user_has_issued_subscription(api: VPNApiClient | None, telegram_user_id: int) -> bool:
+async def user_has_issued_subscription(api: VPNBackend | None, telegram_user_id: int) -> bool:
     """В vpn-productd есть выдача (subscriptionId), даже если срок истёк."""
     if api is None:
         return False
@@ -24,7 +24,7 @@ async def user_has_issued_subscription(api: VPNApiClient | None, telegram_user_i
     return bool(sid)
 
 
-async def resolve_reply_main_menu(api: VPNApiClient | None, telegram_user_id: int):
+async def resolve_reply_main_menu(api: VPNBackend | None, telegram_user_id: int):
     """Нижнее меню: гость (4 кнопки без Мой VPN) или подписчик."""
     from vpn_bot.keyboards.main_menu import reply_main_menu_guest, reply_main_menu_subscribed
 
@@ -33,7 +33,7 @@ async def resolve_reply_main_menu(api: VPNApiClient | None, telegram_user_id: in
     return reply_main_menu_guest()
 
 
-async def fetch_subscription_bundle(api: VPNApiClient, telegram_user_id: int) -> tuple[int, dict[str, Any] | None, dict[str, Any] | None]:
+async def fetch_subscription_bundle(api: VPNBackend, telegram_user_id: int) -> tuple[int, dict[str, Any] | None, dict[str, Any] | None]:
     uid = vpn_user_id(telegram_user_id)
     st, status = await api.issue_status(uid)
     if st != 200:

@@ -472,6 +472,7 @@ func (s *Server) handlePublicSubscription(w http.ResponseWriter, r *http.Request
 		w.Header().Set("X-Profile-Notice", notice)
 		w.Header().Set("X-Subscription-Message", notice)
 	}
+	writeHappSubscriptionHeaders(w)
 	content = withFooterNotice(content, daysLeft)
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
@@ -597,6 +598,51 @@ func daysLeftFromUnix(expiresAtUnix int64) int64 {
 		return 0
 	}
 	return (secondsLeft + 86399) / 86400
+}
+
+// writeHappSubscriptionHeaders emits client-management headers understood by the
+// Happ proxy client (https://www.happ.su/happ/dev-docs/app-management).
+//
+// The critical one is `hide-settings: 1` — it disables the "view/edit server JSON"
+// UI inside Happ, so subscribers cannot see raw Xray configs via the per-row
+// disclosure arrow. This is an Advanced Parameter and only takes effect for
+// subscriptions registered with a Provider ID at happ.su. The remaining headers
+// (profile-update-interval, support-url, profile-web-page-url, announce) are
+// Standard Parameters and work for every Happ install.
+//
+// All values are sourced from environment so operators can toggle behaviour
+// without a rebuild. `VPN_PRODUCT_HAPP_HIDE_SETTINGS` defaults to enabled.
+func writeHappSubscriptionHeaders(w http.ResponseWriter) {
+	if envBool("VPN_PRODUCT_HAPP_HIDE_SETTINGS", true) {
+		w.Header().Set("hide-settings", "1")
+		w.Header().Set("Hide-Settings", "1")
+	}
+	if v := strings.TrimSpace(os.Getenv("VPN_PRODUCT_HAPP_UPDATE_INTERVAL_HOURS")); v != "" {
+		w.Header().Set("profile-update-interval", v)
+	}
+	if v := strings.TrimSpace(os.Getenv("VPN_PRODUCT_HAPP_SUPPORT_URL")); v != "" {
+		w.Header().Set("support-url", v)
+	}
+	if v := strings.TrimSpace(os.Getenv("VPN_PRODUCT_HAPP_WEB_URL")); v != "" {
+		w.Header().Set("profile-web-page-url", v)
+	}
+	if v := strings.TrimSpace(os.Getenv("VPN_PRODUCT_HAPP_ANNOUNCE")); v != "" {
+		w.Header().Set("announce", v)
+	}
+}
+
+func envBool(key string, def bool) bool {
+	raw := strings.TrimSpace(strings.ToLower(os.Getenv(key)))
+	if raw == "" {
+		return def
+	}
+	switch raw {
+	case "1", "true", "yes", "on", "y":
+		return true
+	case "0", "false", "no", "off", "n":
+		return false
+	}
+	return def
 }
 
 func withFooterNotice(content string, daysLeft int64) string {

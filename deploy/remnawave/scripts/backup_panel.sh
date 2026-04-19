@@ -27,7 +27,12 @@ echo "Dumping database from container remnawave-db (UTC: ${ts})"
 docker exec -i remnawave-db pg_dump -U postgres -d postgres > "${dump_path}"
 
 tar -C "${workdir}" -czf "${archive_path}" "$(basename "${dump_path}")"
-shasum -a 256 "${archive_path}" > "${sha_path}"
+if command -v sha256sum >/dev/null 2>&1; then
+  sha256sum "${archive_path}" > "${sha_path}"
+else
+  # macOS fallback
+  shasum -a 256 "${archive_path}" > "${sha_path}"
+fi
 
 echo "Backup created:"
 echo "  ${archive_path}"

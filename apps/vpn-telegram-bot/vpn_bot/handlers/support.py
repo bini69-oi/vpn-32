@@ -4,7 +4,7 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from vpn_bot.config import settings
-from vpn_bot.services.api_client import VPNApiClient
+from vpn_bot.services.api_client import VPNBackend
 from vpn_bot.services.subscription_service import resolve_reply_main_menu
 from vpn_bot.utils import texts
 
@@ -70,7 +70,7 @@ async def cb_faq_menu(query: CallbackQuery) -> None:
 
 
 @router.callback_query(F.data == "faq_back_menu")
-async def cb_faq_back_menu(query: CallbackQuery, api: VPNApiClient | None) -> None:
+async def cb_faq_back_menu(query: CallbackQuery, api: VPNBackend | None) -> None:
     await query.answer()
     if query.message:
         await query.message.delete()

@@ -87,8 +87,8 @@ class AuthMiddleware(BaseMiddleware):
                         api = wf.get("api_client")
                 except Exception:
                     api = None
-            if api is None and settings.vpn_api_token.strip():
-                log.error("api_client missing on dispatcher (VPN_API_TOKEN is set)")
+            if api is None and settings.api_configured():
+                log.error("api_client missing on dispatcher (backend API настроен в .env)")
 
             try:
                 mv_cur = int(row["reply_menu_version"] or 0) if row else 0
