@@ -4,8 +4,12 @@
 
 | Каталог | Назначение |
 |---------|------------|
-| [`vpn-telegram-bot/`](vpn-telegram-bot/README.md) | Telegram-бот на Python (aiogram 3, пакет `vpn_bot`); ходит в Remnawave Panel REST API |
+| [`telegram-shop/`](telegram-shop/README.md) | Готовый Telegram-бот [Jolymmiels/remnawave-telegram-shop](https://github.com/Jolymmiels/remnawave-telegram-shop): продажа подписок, YooKassa / CryptoPay / Stars / Tribute, триал, рефералы. Поднимается одним `docker compose up -d`. |
 
-Запуск и переменные окружения — в README подпроекта. Из корня репозитория удобно использовать `make bot` / `make bot-venv` / `make bot-test`.
+Запуск и переменные окружения — в README подпроекта. Из корня репозитория удобно использовать `make bot-up` / `make bot-logs` / `make bot-pull`.
 
-Mini App (legacy) переехал в [`archive/telegram-miniapp/`](../archive/telegram-miniapp/README.md) — он работал только со старым `vpn-productd` и не переписан на Remnawave.
+## Архив
+
+- [`archive/vpn-telegram-bot-custom/`](../archive/vpn-telegram-bot-custom/) — собственный Python-бот на aiogram 3 (переведён в архив в пользу готового `telegram-shop`).
+- [`archive/telegram-miniapp/`](../archive/telegram-miniapp/) — Mini App под старый `vpn-productd`.
+- [`archive/telegram-bot-legacy/`](../archive/telegram-bot-legacy/) — самая первая версия бота.

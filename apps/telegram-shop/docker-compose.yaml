@@ -1,0 +1,49 @@
+# Remnawave Telegram Shop (готовый бот от Jolymmiels).
+# Docs: https://github.com/Jolymmiels/remnawave-telegram-shop
+#
+# Запуск:
+#   cp .env.sample .env  &&  # заполнить значения
+#   docker compose up -d
+#
+# Обновление:
+#   docker compose pull && docker compose up -d
+
+services:
+  bot:
+    image: ghcr.io/jolymmiels/remnawave-telegram-shop-bot:latest
+    container_name: remnawave-telegram-shop-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./translations:/translations
+
+  db:
+    image: postgres:17
+    container_name: remnawave-telegram-shop-db
+    hostname: remnawave-telegram-shop-db
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - TZ=UTC
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - remnawave-telegram-shop-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 3s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  remnawave-telegram-shop-db-data:
+    driver: local
+    name: remnawave-telegram-shop-db-data

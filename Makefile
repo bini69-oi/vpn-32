@@ -1,54 +1,50 @@
 PYTHON ?= python3
-BOT_DIR := apps/vpn-telegram-bot
-BOT_PY  := $(BOT_DIR)/.venv/bin/python
-BOT_PIP := $(BOT_DIR)/.venv/bin/pip
+BOT_DIR := apps/telegram-shop
+COMPOSE ?= docker compose
 
-.PHONY: help bot-venv bot bot-test bot-cov bot-lint bot-typecheck verify secret-scan ci clean
+.PHONY: help bot-up bot-down bot-logs bot-pull bot-restart bot-ps secret-scan verify ci clean
 
 help:
-	@echo "VPN Product (Remnawave + Telegram bot) — Makefile targets"
+	@echo "VPN Product (Remnawave + готовый Telegram-shop бот) — Makefile"
 	@echo
-	@echo "  make bot-venv       — создать apps/vpn-telegram-bot/.venv с runtime + dev-зависимостями"
-	@echo "  make bot            — запустить Telegram-бот (Remnawave backend)"
-	@echo "  make bot-test       — pytest (быстро, без покрытия)"
-	@echo "  make bot-cov        — pytest + покрытие (порог 80%)"
-	@echo "  make bot-lint       — ruff линт (apps/vpn-telegram-bot)"
-	@echo "  make bot-typecheck  — mypy на vpn_bot/"
-	@echo "  make verify         — secret-scan + lint + typecheck + cov (то, что гоняет CI)"
-	@echo "  make secret-scan    — поиск утечек секретов в коде"
+	@echo "  make bot-up         — поднять Telegram-бот (apps/telegram-shop, docker compose up -d)"
+	@echo "  make bot-down       — остановить и удалить контейнеры бота"
+	@echo "  make bot-logs       — tail логов бота"
+	@echo "  make bot-pull       — docker compose pull + up -d (обновление образа)"
+	@echo "  make bot-restart    — перезапуск бота без обновления"
+	@echo "  make bot-ps         — статус контейнеров бота"
+	@echo "  make secret-scan    — поиск утечек секретов в репо"
+	@echo "  make verify         — всё, что гоняет CI (secret-scan + compose config)"
 
-bot-venv:
-	cd $(BOT_DIR) && $(PYTHON) -m venv .venv \
-		&& ./.venv/bin/pip install -U pip \
-		&& ./.venv/bin/pip install -r requirements.txt \
-		&& ./.venv/bin/pip install -r requirements-dev.txt
+bot-up:
+	@test -f $(BOT_DIR)/.env || (echo "Сначала скопируй: cp $(BOT_DIR)/.env.sample $(BOT_DIR)/.env и заполни значения" && exit 1)
+	cd $(BOT_DIR) && $(COMPOSE) up -d
 
-bot:
-	@test -f $(BOT_PY) || (echo "Сначала выполни: make bot-venv" && exit 1)
-	cd $(BOT_DIR) && ./.venv/bin/python -m vpn_bot
+bot-down:
+	cd $(BOT_DIR) && $(COMPOSE) down
 
-bot-test:
-	@test -f $(BOT_PY) || (echo "Сначала выполни: make bot-venv" && exit 1)
-	cd $(BOT_DIR) && ./.venv/bin/python -m pytest -q
+bot-logs:
+	cd $(BOT_DIR) && $(COMPOSE) logs -f --tail=200
 
-bot-cov:
-	@test -f $(BOT_PY) || (echo "Сначала выполни: make bot-venv" && exit 1)
-	cd $(BOT_DIR) && ./.venv/bin/python -m pytest --cov=vpn_bot --cov-report=term-missing --cov-fail-under=80
+bot-pull:
+	@test -f $(BOT_DIR)/.env || (echo "Сначала скопируй: cp $(BOT_DIR)/.env.sample $(BOT_DIR)/.env и заполни значения" && exit 1)
+	cd $(BOT_DIR) && $(COMPOSE) pull && $(COMPOSE) up -d
 
-bot-lint:
-	@test -f $(BOT_PY) || (echo "Сначала выполни: make bot-venv" && exit 1)
-	cd $(BOT_DIR) && ./.venv/bin/python -m ruff check vpn_bot tests
+bot-restart:
+	cd $(BOT_DIR) && $(COMPOSE) restart
 
-bot-typecheck:
-	@test -f $(BOT_PY) || (echo "Сначала выполни: make bot-venv" && exit 1)
-	cd $(BOT_DIR) && ./.venv/bin/python -m mypy vpn_bot
+bot-ps:
+	cd $(BOT_DIR) && $(COMPOSE) ps
 
 secret-scan:
 	$(PYTHON) scripts/secret_scan.py
 
-verify: secret-scan bot-lint bot-typecheck bot-cov
+bot-compose-check:
+	cd $(BOT_DIR) && $(COMPOSE) config >/dev/null
+
+verify: secret-scan bot-compose-check
 
 ci: verify
 
 clean:
-	rm -rf $(BOT_DIR)/.venv $(BOT_DIR)/.pytest_cache $(BOT_DIR)/.mypy_cache $(BOT_DIR)/.ruff_cache $(BOT_DIR)/.coverage
+	@echo "nothing to clean (бот теперь — готовый docker-образ)"

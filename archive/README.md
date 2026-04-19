@@ -6,20 +6,26 @@
 | Каталог | Что было |
 |---------|----------|
 | `vpn-productd/` | Полный legacy-стек: Go-сервис `vpn-productd` + `vpn-productctl` (`cmd/`, `internal/`), его systemd-юниты, deploy-скрипты, мониторинг (Grafana/Prometheus), logrotate, Caddy-пример, env-файлы. Использовал 3x-ui как back-of-house. **Заменён на Remnawave Panel + Node.** |
+| `vpn-telegram-bot-custom/` | Собственный Telegram-бот на aiogram 3 (Python 3.12/3.13) с 205 тестами, `ruff`/`mypy`/`pytest-cov` в CI. Заменён на готовый [`apps/telegram-shop/`](../apps/telegram-shop/README.md) (upstream-бот `Jolymmiels/remnawave-telegram-shop`). |
 | `telegram-miniapp/` | Mini App на Node (Express) — ходил только в `vpn-productd`. На Remnawave не переписан. |
-| `telegram-bot-legacy/` | Прежний бот на `python-telegram-bot` (до aiogram 3-перепиcа). Актуальный — `apps/vpn-telegram-bot/`. |
+| `telegram-bot-legacy/` | Самая ранняя версия бота на `python-telegram-bot` (до aiogram 3-перепиcа). |
 | `tests-integration-coverage/` | Старые bash-скрипты `coverall`/`coverall2` из апстримного Xray-форка. |
 | `config-examples/` | `secure_profile.json` из `internal/examples/` — никем не использовался. |
 
 ## Если нужно вернуть
 
 ```bash
-# вернуть legacy-бота в корень
-mv archive/telegram-bot-legacy telegram-bot
+# вернуть кастомный aiogram-бот в активный пайплайн
+git mv archive/vpn-telegram-bot-custom apps/vpn-telegram-bot
+# и восстановить bot-quality-job в .github/workflows/ci.yml + Python-таргеты в Makefile
+# из истории до коммита перехода на remnawave-telegram-shop
 
-# вернуть vpn-productd в активный пайплайн (потребуется восстановить go.mod / Makefile-цели)
-mv archive/vpn-productd/cmd cmd
-mv archive/vpn-productd/internal internal
+# вернуть legacy-бота в корень
+git mv archive/telegram-bot-legacy telegram-bot
+
+# вернуть vpn-productd (потребуется восстановить go.mod / Makefile-цели)
+git mv archive/vpn-productd/cmd cmd
+git mv archive/vpn-productd/internal internal
 git restore --source=<commit-where-go.mod-existed> go.mod go.sum .golangci.yml Dockerfile Makefile
 ```
 
