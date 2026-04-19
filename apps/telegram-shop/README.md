@@ -77,6 +77,64 @@ docker compose down && docker compose up -d
 - `REMNAWAVE_URL` / `REMNAWAVE_TOKEN` — в админке Remnawave Panel: **API Tokens → Create**.
 - `SQUAD_UUIDS` — в Remnawave Panel: **Internal Squads → копируй UUID нужных**.
 
+## Рефералы, логи и статистика (бесплатный бот)
+
+В `.env` включи рефералку: **`REFERRAL_DAYS`** > `0` (например `7`) — иначе кнопка рефералов не появится.
+
+### Что видит пользователь в Telegram
+
+В экране реферала текст один: **«Приглашено: N»** — это `COUNT(*)` по таблице `referral` для данного `referrer_id` ([`internal/handler/referral.go`](https://github.com/Jolymmiels/remnawave-telegram-shop/blob/main/internal/handler/referral.go)). Отдельной строки **«из них оплатили: M»** в UI **нет**.
+
+Запись в `referral` создаётся только если новый пользователь **впервые** нажал `/start` со ссылкой вида `?start=ref_<telegram_id_пригласившего>` ([`internal/handler/start.go`](https://github.com/Jolymmiels/remnawave-telegram-shop/blob/main/internal/handler/start.go)).
+
+### Кто из приглашённых оплатил
+
+После успешной оплаты приглашённого бот начисляет дни пригласившему и выставляет **`referral.bonus_granted = true`** ([`internal/payment/payment.go`](https://github.com/Jolymmiels/remnawave-telegram-shop/blob/main/internal/payment/payment.go)). То есть:
+
+- **пригласил по ссылке** — есть строка в `referral` с `bonus_granted = false`;
+- **приглашённый реально оплатил** (и бонус выдан) — та же строка с `bonus_granted = true`.
+
+### Логирование
+
+Бот пишет в **stdout** через `log/slog` (уровни `Info` / `Error`). Смотреть:
+
+```bash
+docker compose logs -f bot
+```
+
+Полезные события: `referral created`, `Granted referral bonus`, `purchase processed`, ошибки платежей и Remnawave.
+
+### SQL для админской статистики (Postgres бота)
+
+Подключиться к БД контейнера (`POSTGRES_*` из `.env`):
+
+```bash
+docker compose exec db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+```
+
+Сколько пригласил каждый и сколько из них уже «дошли до оплаты» (бонус выдан):
+
+```sql
+SELECT
+  referrer_id,
+  COUNT(*) AS invited,
+  COUNT(*) FILTER (WHERE bonus_granted) AS paid_invited
+FROM referral
+GROUP BY referrer_id
+ORDER BY invited DESC;
+```
+
+Детализация по одному пригласившему (подставь `123456789`):
+
+```sql
+SELECT r.referee_id, r.used_at, r.bonus_granted
+FROM referral r
+WHERE r.referrer_id = 123456789
+ORDER BY r.used_at DESC;
+```
+
+В бесплатной версии **нет** отдельной админ-панели с графиками рефералов (это уже уровень платного RWP Shop или свой Grafana поверх логов/SQL).
+
 ## Ссылки
 
 - Upstream-репозиторий: <https://github.com/Jolymmiels/remnawave-telegram-shop>
