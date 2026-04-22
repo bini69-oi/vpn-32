@@ -6,23 +6,20 @@ Telegram-бот + Web API + Postgres + Redis для продажи VPN на **Re
 
 ## Быстрый старт
 
+1. Запусти **Docker Desktop** (на Mac) и дождись готовности (`docker info` без ошибки).
+2. Скачай шаблон `.env` с upstream и **в редакторе** заполни минимум: `POSTGRES_PASSWORD`, `BOT_TOKEN`, `ADMIN_IDS`, `REMNAWAVE_API_URL`, `REMNAWAVE_API_KEY` (остальное — по [доке](https://docs.bedolagam.ru)).
+3. Логотип: `bash scripts/fetch_assets.sh` (файл не в git).
+
 ```bash
 cd apps/bedolaga-bot
-
-# 1) Полный шаблон конфигурации (1038+ строк) — скачай с upstream и отредактируй секреты
 curl -fsSL -o .env https://raw.githubusercontent.com/BEDOLAGA-DEV/remnawave-bedolaga-telegram-bot/main/.env.example
-
-# 2) Обязательно поменяй как минимум:
-#    POSTGRES_PASSWORD, BOT_TOKEN, ADMIN_IDS,
-#    REMNAWAVE_API_URL, REMNAWAVE_API_KEY (или другой REMNAWAVE_AUTH_TYPE по доке)
-
-# 3) Логотип для сообщений (не хранится в git из‑за размера)
 bash scripts/fetch_assets.sh
-
 docker compose pull
 docker compose up -d
 docker compose logs -f bot
 ```
+
+После `curl` **обязательно** отредактируй `.env` — иначе бот не подключится ни к Telegram, ни к панели.
 
 Из корня репозитория: `make bot-up` (проверяет `.env` и при необходимости качает `vpn_logo.png`).
 

@@ -1,5 +1,6 @@
 PYTHON ?= python3
 BOT_DIR := apps/bedolaga-bot
+XRAY_CHECKER_DIR := deploy/xray-checker
 COMPOSE ?= docker compose
 
 .PHONY: help bot-up bot-down bot-logs bot-pull bot-restart bot-ps bot-assets secret-scan verify ci clean
@@ -15,7 +16,7 @@ help:
 	@echo "  make bot-ps         — статус контейнеров"
 	@echo "  make bot-assets     — скачать vpn_logo.png (не хранится в git)"
 	@echo "  make secret-scan    — поиск утечек секретов в репо"
-	@echo "  make verify         — secret-scan + docker compose config (CI)"
+	@echo "  make verify         — secret-scan + docker compose config (бот + xray-checker, CI)"
 
 bot-assets:
 	cd $(BOT_DIR) && bash scripts/fetch_assets.sh
@@ -48,7 +49,10 @@ secret-scan:
 bot-compose-check:
 	cd $(BOT_DIR) && $(COMPOSE) config >/dev/null
 
-verify: secret-scan bot-compose-check
+xray-checker-compose-check:
+	cd $(XRAY_CHECKER_DIR) && cp -f .env.example .env && $(COMPOSE) config >/dev/null
+
+verify: secret-scan bot-compose-check xray-checker-compose-check
 
 ci: verify
 

@@ -1,0 +1,9 @@
+services:
+  xray-checker:
+    image: kutovoys/xray-checker:latest
+    container_name: xray-checker
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:2112:2112"

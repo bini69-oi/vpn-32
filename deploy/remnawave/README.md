@@ -14,7 +14,7 @@
   - минимум **1 vCPU, 1GB RAM** (важнее сеть и стабильность)
   - публичный IP
   - Docker
-  - **открыт NODE_PORT только для IP панели** (firewall)
+  - **NODE_PORT** доступен с интернета для **клиентского VPN**; SSH и прочие порты — по политике фаервола (см. [`docs/SECURITY_WIREFALL_CLOUDFLARE.md`](docs/SECURITY_WIREFALL_CLOUDFLARE.md))
 
 Официальная дока:  
 - Panel: `https://docs.rw/docs/install/remnawave-panel/`  
@@ -132,6 +132,24 @@ sudo ip6tables -S REMNAWAVE_CLOUDFLARE_ORIGIN
 **Cloudflare Access** именно на `PANEL_DOMAIN`, а `SUB_DOMAIN` оставьте публичным только для клиентских
 подписок.
 
+### 3.2) DDoS и брутфорс по HTTPS (настройки в Cloudflare)
+
+Cloudflare **не закрывает SSH** и не заменяет сильный пароль/MFA в самой панели, но снимает основную волну L7 и часть L3/L4 для **проксируемых доменов** (orange cloud).
+
+В дашборде Cloudflare имеет смысл включить **WAF**, **Bot Fight** (или аналог по тарифу), **Rate limiting** на пути логина/API панели. Подробнее и про ограничения — **[`docs/SECURITY_WIREFALL_CLOUDFLARE.md`](docs/SECURITY_WIREFALL_CLOUDFLARE.md)**.
+
+### 3.3) Wirefall: фаервол на хосте панели (UFW)
+
+После того как у вас стабильно работают SSH, Docker и Caddy, можно включить **default deny** на входящие и явно открыть только нужные порты:
+
+```bash
+cd <repo>
+# лучше сузить SSH до своего IP:
+sudo CONFIRM=1 ADMIN_SSH_CIDR=ВАШ_IP/32 bash deploy/remnawave/scripts/harden_ufw_panel.sh
+```
+
+Без `ADMIN_SSH_CIDR` скрипт разрешит SSH с любого адреса (удобно, но слабее против брутфорса по SSH — тогда обязательно **ключи** и отключение пароля в `sshd`). Полная схема: тот же файл **`docs/SECURITY_WIREFALL_CLOUDFLARE.md`**.
+
 ### 4) Первый запуск: создать superadmin
 
 По доке Remnawave: **первый зарегистрированный пользователь становится super-admin**.  
@@ -172,8 +190,17 @@ sudo bash deploy/remnawave/scripts/install_node.sh
 - `NODE_PORT=2222` (или ваш)
 - `SECRET_KEY="..."` (из UI)
 
-Важно: закройте `NODE_PORT` во внешнем мире, откройте только для IP панели.  
-Источник: `https://docs.rw/docs/install/remnawave-node/` (Important note)
+Важно: **клиенты VPN** должны достучаться до **NODE_PORT** по сети (обычно порт открыт на весь интернет). Панель управляет нодой по тому же или связанному каналу — см. официальную доку. От **лишних** портов на сервере ноды защищает фаервол (Wirefall):
+
+```bash
+cd <repo>
+sudo CONFIRM=1 NODE_PORT=2222 bash deploy/remnawave/scripts/harden_ufw_node.sh
+# опционально сузить SSH:
+# sudo CONFIRM=1 NODE_PORT=2222 ADMIN_SSH_CIDR=ВАШ_IP/32 bash deploy/remnawave/scripts/harden_ufw_node.sh
+```
+
+Источник: `https://docs.rw/docs/install/remnawave-node/`  
+Схема безопасности: [`docs/SECURITY_WIREFALL_CLOUDFLARE.md`](docs/SECURITY_WIREFALL_CLOUDFLARE.md)
 
 ---
 
@@ -219,7 +246,7 @@ ls -lah /var/backups/remnawave
 ## Troubleshooting (топ‑3)
 
 1) **Node не подключается**
-   - Проверьте firewall: `NODE_PORT` должен быть доступен **только** с IP панели.
+   - Проверьте firewall: для **клиентов** `NODE_PORT` должен быть **доступен с интернета** (если не используете нестандартную схему); для **панели** — см. логи ноды и сеть между панелью и нодой.
    - Проверьте что `SECRET_KEY` точно совпадает с тем, что выдали в UI.
    - Источник: `https://docs.rw/docs/install/remnawave-node/`
 

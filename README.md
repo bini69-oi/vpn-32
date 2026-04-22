@@ -18,6 +18,7 @@
 - [**Remnawave Panel + Node**](deploy/remnawave/README.md) — официальный Docker-стек Remnawave ([docs.rw](https://docs.rw/)). Панель управляет пользователями и подписками, нода шифрует трафик (VLESS / REALITY через встроенный Xray-core).
 - [**Telegram-бот Bedolaga**](apps/bedolaga-bot/README.md) — образ `ghcr.io/bedolaga-dev/remnawave-bedolaga-telegram-bot`, Postgres, Redis; интеграция с Remnawave API, множество платёжек, рефералка, админка в Telegram, опциональный веб-кабинет ([документация](https://docs.bedolagam.ru)).
 - **2–3 сервера** без лишней обвязки: Panel, Node, бот (бот можно поставить рядом с Panel).
+- [**Xray Checker**](deploy/xray-checker/README.md) — опциональный мониторинг доступности прокси и метрики; upstream: [kutovoys/xray-checker](https://github.com/kutovoys/xray-checker).
 
 > **История.** Раньше здесь жил Go-сервис `vpn-productd` + форк Xray-core + Mini App + собственный Python-бот; затем бот Jolymmiels `remnawave-telegram-shop` (см. [`archive/telegram-shop-jolymmiels/`](archive/telegram-shop-jolymmiels/README.md)). Сейчас ядро — официальный Remnawave, продажи — **Bedolaga**.
 
@@ -64,6 +65,9 @@ cd /opt/remnawave && docker compose up -d
 # после включения orange-cloud proxy в Cloudflare:
 sudo systemctl enable --now remnawave-cloudflare-origin.service
 sudo systemctl enable --now remnawave-cloudflare-origin.timer
+# DDoS/брутфорс по HTTPS — настройки в Cloudflare (WAF, rate limit); SSH — ключи + UFW:
+# см. deploy/remnawave/docs/SECURITY_WIREFALL_CLOUDFLARE.md
+# sudo CONFIRM=1 ADMIN_SSH_CIDR=ВАШ_IP/32 bash deploy/remnawave/scripts/harden_ufw_panel.sh
 ```
 
 DNS: `PANEL_DOMAIN` и `SUB_DOMAIN` резолвятся на IP панели, Caddy сам выпустит SSL.
@@ -81,17 +85,16 @@ sudoedit /opt/remnanode/.env     # NODE_PORT + SECRET_KEY из UI
 cd /opt/remnanode && docker compose up -d
 ```
 
-Фаервол: `NODE_PORT` открыт **только** для IP панели.
+Фаервол (Wirefall): закрыть лишние порты на ноде, `NODE_PORT` открыт для **клиентов VPN** — см. [`deploy/remnawave/docs/SECURITY_WIREFALL_CLOUDFLARE.md`](deploy/remnawave/docs/SECURITY_WIREFALL_CLOUDFLARE.md) и `harden_ufw_node.sh`.
 
 ### 3. Telegram-бот Bedolaga (рядом с Panel или отдельный сервер)
+
+Сначала отредактируй `.env` после скачивания (см. [apps/bedolaga-bot/README.md](apps/bedolaga-bot/README.md)).
 
 ```bash
 cd apps/bedolaga-bot
 curl -fsSL -o .env https://raw.githubusercontent.com/BEDOLAGA-DEV/remnawave-bedolaga-telegram-bot/main/.env.example
-# отредактируй .env: POSTGRES_PASSWORD, BOT_TOKEN, ADMIN_IDS,
-#   REMNAWAVE_API_URL, REMNAWAVE_API_KEY, платёжки и т.д. (см. docs.bedolagam.ru)
-
-bash scripts/fetch_assets.sh   # vpn_logo.png
+bash scripts/fetch_assets.sh
 docker compose pull
 docker compose up -d
 docker compose logs -f bot
@@ -153,6 +156,7 @@ make bot-assets   # vpn_logo.png
 |------|------------|
 | [`apps/bedolaga-bot/`](apps/bedolaga-bot/README.md) | Bedolaga: `docker-compose.yml` (localhost API, без публикации БД) + скрипт ассетов |
 | [`deploy/remnawave/`](deploy/remnawave/README.md) | Docker Compose + `install_*.sh` для Panel / Node + Caddy + systemd-бэкап |
+| [`deploy/xray-checker/`](deploy/xray-checker/README.md) | Docker Compose для [Xray Checker](https://github.com/kutovoys/xray-checker) (подписка → проверки, UI на `127.0.0.1:2112`) |
 | [`deploy/backups/`](deploy/backups/) | Скрипты бэкапа Postgres Remnawave |
 | [`docs/`](docs/) | [COMMANDS.md](docs/COMMANDS.md), [CONTRIBUTING.md](docs/CONTRIBUTING.md) |
 | [`scripts/`](scripts/) | `secret_scan.py`, git-хуки (`pre-commit`/`pre-push`) |
@@ -165,7 +169,7 @@ make bot-assets   # vpn_logo.png
 GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)):
 
 1. **`secret-scan`** — `scripts/secret_scan.py` ищет утечки токенов/ключей.
-2. **`compose-lint`** — `docker compose config` для [`apps/bedolaga-bot/docker-compose.yml`](apps/bedolaga-bot/docker-compose.yml) с [`apps/bedolaga-bot/.env.ci`](apps/bedolaga-bot/.env.ci).
+2. **`compose-lint`** — `docker compose config` для [`apps/bedolaga-bot`](apps/bedolaga-bot/docker-compose.yml) (`.env.ci`) и [`deploy/xray-checker`](deploy/xray-checker/docker-compose.yml) (`.env.example`).
 
 Собственный Python-бот со всеми 205 тестами (ruff + mypy + pytest --cov ≥ 80 %) лежит в [`archive/vpn-telegram-bot-custom/`](archive/vpn-telegram-bot-custom/). Если захочешь вернуться к своему боту — перенеси обратно в `apps/` и восстанови `bot-quality` job из истории `.github/workflows/ci.yml`.
 
@@ -178,7 +182,7 @@ bash scripts/install_git_hooks.sh
 ```
 
 - `pre-commit`: `make secret-scan`.
-- `pre-push`: `make verify` (secret-scan + compose config).
+- `pre-push`: `make verify` (secret-scan + compose config для бота и xray-checker).
 
 ---
 
@@ -188,6 +192,8 @@ bash scripts/install_git_hooks.sh
 |----------|------------|
 | [`apps/bedolaga-bot/README.md`](apps/bedolaga-bot/README.md) | Запуск Bedolaga, безопасность портов, логи |
 | [`deploy/remnawave/README.md`](deploy/remnawave/README.md) | Установка Panel + Node, DNS, SSL, бэкапы |
+| [`deploy/remnawave/docs/SECURITY_WIREFALL_CLOUDFLARE.md`](deploy/remnawave/docs/SECURITY_WIREFALL_CLOUDFLARE.md) | DDoS/брутфорс: Cloudflare + UFW (Wirefall), SSH |
+| [`deploy/xray-checker/README.md`](deploy/xray-checker/README.md) | Запуск мониторинга, ссылка на [GitHub](https://github.com/kutovoys/xray-checker) |
 | [`docs/COMMANDS.md`](docs/COMMANDS.md) | Полная шпаргалка |
 | [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | Процесс разработки |
 | [`archive/README.md`](archive/README.md) | Что лежит в `archive/` и почему |

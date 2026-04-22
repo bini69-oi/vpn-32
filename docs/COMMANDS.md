@@ -18,15 +18,18 @@ make bot-assets   # только скачать vpn_logo.png
 
 Напрямую:
 
+Перед командами отредактируй `.env` (минимум: `POSTGRES_PASSWORD`, `BOT_TOKEN`, `ADMIN_IDS`, `REMNAWAVE_API_URL`, `REMNAWAVE_API_KEY`, при необходимости платёжки — см. [docs.bedolagam.ru](https://docs.bedolagam.ru)).
+
 ```bash
 cd apps/bedolaga-bot
 curl -fsSL -o .env https://raw.githubusercontent.com/BEDOLAGA-DEV/remnawave-bedolaga-telegram-bot/main/.env.example
-# отредактируй .env (POSTGRES_PASSWORD, BOT_TOKEN, ADMIN_IDS, REMNAWAVE_API_*, платёжки)
 bash scripts/fetch_assets.sh
 docker compose pull
 docker compose up -d
 docker compose logs -f bot
 ```
+
+После `curl` открой `.env` в редакторе и заполни поля выше (не вставляй строки с `#` из подсказок в zsh без `setopt interactivecomments`).
 
 Файловые логи приложения на хосте: `apps/bedolaga-bot/logs/` (volume `./logs` → `/app/logs`).
 
@@ -50,6 +53,27 @@ cd /opt/remnawave && docker compose pull && docker compose up -d
 sudo bash deploy/remnawave/scripts/install_node.sh
 sudoedit /opt/remnanode/.env   # NODE_PORT, SECRET_KEY (взять в UI панели → Add Node)
 cd /opt/remnanode && docker compose pull && docker compose up -d
+```
+
+Защита от DDoS/брутфорса (Cloudflare + UFW на хосте): [`deploy/remnawave/docs/SECURITY_WIREFALL_CLOUDFLARE.md`](../deploy/remnawave/docs/SECURITY_WIREFALL_CLOUDFLARE.md).
+
+```bash
+# панель (после orange cloud + remnawave-cloudflare-origin по основному README)
+sudo CONFIRM=1 ADMIN_SSH_CIDR=ВАШ_IP/32 bash deploy/remnawave/scripts/harden_ufw_panel.sh
+# нода (NODE_PORT для клиентов VPN)
+sudo CONFIRM=1 NODE_PORT=2222 bash deploy/remnawave/scripts/harden_ufw_node.sh
+```
+
+## Xray Checker (мониторинг прокси)
+
+Репозиторий upstream: [github.com/kutovoys/xray-checker](https://github.com/kutovoys/xray-checker).
+
+```bash
+cd deploy/xray-checker
+cp .env.example .env
+# задайте SUBSCRIPTION_URL из Remnawave
+docker compose up -d
+# UI: http://127.0.0.1:2112 (только локально на сервере)
 ```
 
 Бэкап Postgres панели:
