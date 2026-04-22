@@ -61,6 +61,9 @@ cd vpn-work-xray
 sudo bash deploy/remnawave/scripts/install_panel.sh
 sudoedit /opt/remnawave/.env     # PANEL_DOMAIN, SUB_PUBLIC_DOMAIN, JWT_AUTH_SECRET, JWT_API_TOKENS_SECRET
 cd /opt/remnawave && docker compose up -d
+# после включения orange-cloud proxy в Cloudflare:
+sudo systemctl enable --now remnawave-cloudflare-origin.service
+sudo systemctl enable --now remnawave-cloudflare-origin.timer
 ```
 
 DNS: `PANEL_DOMAIN` и `SUB_DOMAIN` резолвятся на IP панели, Caddy сам выпустит SSL.
