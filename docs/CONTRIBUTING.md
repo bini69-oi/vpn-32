@@ -24,6 +24,6 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 ## Code style
 
 - Go: `golangci-lint` (see `.golangci.yml`)
-- Python (`apps/vpn-telegram-bot/`): `black` + `ruff` (recommended)
+- Python (архив `archive/vpn-telegram-bot-custom/`): `black` + `ruff` (recommended)
 - Wrap errors with context: `fmt.Errorf("context: %w", err)`
 - Target coverage for product packages: see `Makefile` (`MIN_COVERAGE`, default 80% for selected packages in `verify`)

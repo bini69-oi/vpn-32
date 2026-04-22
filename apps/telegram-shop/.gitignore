@@ -1,6 +1,0 @@
-.env
-*.log
-
-# выгрузки export_audit_log.sh (таблицы в CSV + срез docker-лога)
-logs/*.csv
-logs/docker_bot_*.log

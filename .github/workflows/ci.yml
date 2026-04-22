@@ -22,8 +22,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Validate telegram-shop docker-compose
-        working-directory: apps/telegram-shop
+      - name: Validate bedolaga-bot docker-compose
+        working-directory: apps/bedolaga-bot
         run: |
-          cp .env.sample .env
+          cp .env.ci .env
           docker compose config >/dev/null

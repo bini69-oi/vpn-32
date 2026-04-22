@@ -4,12 +4,13 @@
 
 | Каталог | Назначение |
 |---------|------------|
-| [`telegram-shop/`](telegram-shop/README.md) | Готовый Telegram-бот [Jolymmiels/remnawave-telegram-shop](https://github.com/Jolymmiels/remnawave-telegram-shop): продажа подписок, YooKassa / CryptoPay / Stars / Tribute, триал, рефералы. Поднимается одним `docker compose up -d`. |
+| [`bedolaga-bot/`](bedolaga-bot/README.md) | **[Bedolaga](https://github.com/BEDOLAGA-DEV/remnawave-bedolaga-telegram-bot)** — продажи VPN через Telegram (+ Web API, Postgres, Redis). Образ `ghcr.io/bedolaga-dev/remnawave-bedolaga-telegram-bot:latest`; в репозитории — усиленный compose (API только на `127.0.0.1`, БД не наружу). |
 
-Запуск и переменные окружения — в README подпроекта. Из корня репозитория удобно использовать `make bot-up` / `make bot-logs` / `make bot-pull`.
+Запуск: см. [`bedolaga-bot/README.md`](bedolaga-bot/README.md). Из корня: `make bot-up`, `make bot-logs`, `make bot-pull`, `make bot-assets`.
 
 ## Архив
 
-- [`archive/vpn-telegram-bot-custom/`](../archive/vpn-telegram-bot-custom/) — собственный Python-бот на aiogram 3 (переведён в архив в пользу готового `telegram-shop`).
+- [`archive/telegram-shop-jolymmiels/`](../archive/telegram-shop-jolymmiels/) — прежний Docker-бот [Jolymmiels/remnawave-telegram-shop](https://github.com/Jolymmiels/remnawave-telegram-shop).
+- [`archive/vpn-telegram-bot-custom/`](../archive/vpn-telegram-bot-custom/) — собственный Python-бот на aiogram 3.
 - [`archive/telegram-miniapp/`](../archive/telegram-miniapp/) — Mini App под старый `vpn-productd`.
-- [`archive/telegram-bot-legacy/`](../archive/telegram-bot-legacy/) — самая первая версия бота.
+- [`archive/telegram-bot-legacy/`](../archive/telegram-bot-legacy/) — самая ранняя версия бота.

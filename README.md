@@ -1,12 +1,12 @@
 <div align="center">
 
-# VPN Product — Remnawave + готовый Telegram-бот
+# VPN Product — Remnawave + Bedolaga
 
-**Коммерческий VPN-сервис:** Remnawave Panel + Remnawave Node + готовый Telegram-shop бот [Jolymmiels/remnawave-telegram-shop](https://github.com/Jolymmiels/remnawave-telegram-shop). Всё ставится в 3 команды на 2–3 серверах.
+**Коммерческий VPN-сервис:** Remnawave Panel + Remnawave Node + Telegram-бот **[Bedolaga](https://github.com/BEDOLAGA-DEV/remnawave-bedolaga-telegram-bot)** (продажи, баланс, платежи, веб API). Ставится на 2–3 серверах; в репозитории — усиленный `docker-compose` (Postgres/Redis без публикации наружу, HTTP API только на `127.0.0.1`).
 
 [![CI](https://img.shields.io/github/actions/workflow/status/bini69-oi/vpn-work-xray/ci.yml?style=flat-square&label=CI)](https://github.com/bini69-oi/vpn-work-xray/actions)
 [![Remnawave](https://img.shields.io/badge/Remnawave-Panel%20%2B%20Node-blue?style=flat-square)](https://docs.rw)
-[![Bot](https://img.shields.io/badge/Bot-remnawave--telegram--shop-26A5E4?style=flat-square&logo=telegram&logoColor=white)](https://github.com/Jolymmiels/remnawave-telegram-shop)
+[![Bot](https://img.shields.io/badge/Bot-Bedolaga-26A5E4?style=flat-square&logo=telegram&logoColor=white)](https://github.com/BEDOLAGA-DEV/remnawave-bedolaga-telegram-bot)
 [![License](https://img.shields.io/badge/License-MPL--2.0-green?style=flat-square)](LICENSE)
 
 </div>
@@ -16,10 +16,10 @@
 ## Что это
 
 - [**Remnawave Panel + Node**](deploy/remnawave/README.md) — официальный Docker-стек Remnawave ([docs.rw](https://docs.rw/)). Панель управляет пользователями и подписками, нода шифрует трафик (VLESS / REALITY через встроенный Xray-core).
-- [**Telegram-бот**](apps/telegram-shop/README.md) — готовое opensource-решение `remnawave-telegram-shop`: покупка подписок (1/3/6/12 мес.), YooKassa, CryptoPay, Telegram Stars, Tribute, триал, реф-программа, `/sync` с панелью, уведомления за 3 дня до окончания. Ставится одним `docker compose up -d`.
+- [**Telegram-бот Bedolaga**](apps/bedolaga-bot/README.md) — образ `ghcr.io/bedolaga-dev/remnawave-bedolaga-telegram-bot`, Postgres, Redis; интеграция с Remnawave API, множество платёжек, рефералка, админка в Telegram, опциональный веб-кабинет ([документация](https://docs.bedolagam.ru)).
 - **2–3 сервера** без лишней обвязки: Panel, Node, бот (бот можно поставить рядом с Panel).
 
-> **История.** Раньше здесь жил Go-сервис `vpn-productd` + форк Xray-core + Mini App + собственный Python-бот. Всё снято с эксплуатации и вынесено в [`archive/`](archive/README.md). Теперь ядро — официальный Remnawave, а продаёт подписки готовый, давно вылизанный бот.
+> **История.** Раньше здесь жил Go-сервис `vpn-productd` + форк Xray-core + Mini App + собственный Python-бот; затем бот Jolymmiels `remnawave-telegram-shop` (см. [`archive/telegram-shop-jolymmiels/`](archive/telegram-shop-jolymmiels/README.md)). Сейчас ядро — официальный Remnawave, продажи — **Bedolaga**.
 
 ---
 
@@ -28,9 +28,9 @@
 ```
  ┌─────────────────────────────┐        ┌──────────────────────────────┐
  │  Сервер 1 — Remnawave Panel │        │  Сервер 3 (или рядом с 1)    │
- │  ┌───────────────────────┐  │◀──────▶│  Telegram-shop bot + PG      │
+ │  ┌───────────────────────┐  │◀──────▶│  Bedolaga bot + PG + Redis   │
  │  │ remnawave (REST API)  │  │ HTTPS  │  docker compose up -d        │
- │  │ Postgres  Redis       │  │        │  apps/telegram-shop/         │
+ │  │ Postgres  Redis       │  │        │  apps/bedolaga-bot/          │
  │  │ subscription-page     │  │        └──────────────┬───────────────┘
  │  │ Caddy (HTTPS)         │  │                       │
  │  └───────────────────────┘  │                       ▼
@@ -83,18 +83,15 @@ cd /opt/remnanode && docker compose up -d
 
 Фаервол: `NODE_PORT` открыт **только** для IP панели.
 
-### 3. Telegram-бот (рядом с Panel или отдельный сервер)
+### 3. Telegram-бот Bedolaga (рядом с Panel или отдельный сервер)
 
 ```bash
-cd apps/telegram-shop
-cp .env.sample .env
-# минимум:
-#   TELEGRAM_TOKEN, ADMIN_TELEGRAM_ID,
-#   REMNAWAVE_URL=https://panel.example.com,
-#   REMNAWAVE_TOKEN=<bearer из UI панели: Settings → API tokens>,
-#   PRICE_1/3/6/12, STARS_PRICE_1/3/6/12,
-#   (опционально) SQUAD_UUIDS — UUID внутренних сквадов
+cd apps/bedolaga-bot
+curl -fsSL -o .env https://raw.githubusercontent.com/BEDOLAGA-DEV/remnawave-bedolaga-telegram-bot/main/.env.example
+# отредактируй .env: POSTGRES_PASSWORD, BOT_TOKEN, ADMIN_IDS,
+#   REMNAWAVE_API_URL, REMNAWAVE_API_KEY, платёжки и т.д. (см. docs.bedolagam.ru)
 
+bash scripts/fetch_assets.sh   # vpn_logo.png
 docker compose pull
 docker compose up -d
 docker compose logs -f bot
@@ -107,29 +104,27 @@ make bot-up       # up -d
 make bot-logs     # tail логов
 make bot-pull     # обновление образа
 make bot-down     # stop + rm
+make bot-assets   # vpn_logo.png
 ```
 
 ---
 
 ## Что настраивается в `.env` бота
 
-Все переменные — в [`apps/telegram-shop/.env.sample`](apps/telegram-shop/.env.sample). Ключевые:
+Шаблон на **1000+ строк** — скачивай с upstream (см. быстрый старт выше). Кратко:
 
 | Переменная | Что это |
 |---|---|
-| `TELEGRAM_TOKEN` | Токен из @BotFather |
-| `ADMIN_TELEGRAM_ID` | Твой Telegram ID (узнать у [@userinfobot](https://t.me/userinfobot)) |
-| `REMNAWAVE_URL` | `https://panel.example.com` |
-| `REMNAWAVE_TOKEN` | Bearer-токен из Panel → Settings → API tokens |
-| `SQUAD_UUIDS` | UUID внутренних сквадов (если пусто — назначаются все) |
-| `PRICE_1/3/6/12` | Цена в ₽ за 1/3/6/12 месяцев |
-| `STARS_PRICE_1/3/6/12` | Цена в Telegram Stars |
-| `TRIAL_DAYS`, `TRIAL_TRAFFIC_LIMIT` | Бесплатный триал |
-| `REFERRAL_DAYS` | Бонус за реферала в днях |
-| `YOOKASA_*`, `CRYPTO_PAY_*`, `TRIBUTE_*` | Платёжки (включаются только если заполнены) |
-| `SUPPORT_URL`, `CHANNEL_URL`, … | Доп. кнопки в меню (пусто = скрыты) |
+| `BOT_TOKEN` | Токен из @BotFather |
+| `ADMIN_IDS` | Telegram ID админов (через запятую) |
+| `POSTGRES_PASSWORD` | Сильный пароль БД бота |
+| `REMNAWAVE_API_URL` | `https://panel.example.com` |
+| `REMNAWAVE_API_KEY` | Ключ API панели (или другой `REMNAWAVE_AUTH_TYPE` по доке Bedolaga) |
+| `WEB_API_ENABLED` | Оставь `false`, пока не нужен HTTP API; при `true` задай `WEB_API_DEFAULT_TOKEN` и отдавай наружу только через HTTPS reverse proxy |
 
-Полный список с описаниями: [upstream README](https://github.com/Jolymmiels/remnawave-telegram-shop#environment-variables).
+Полный справочник: [upstream `.env.example`](https://github.com/BEDOLAGA-DEV/remnawave-bedolaga-telegram-bot/blob/main/.env.example) и [docs.bedolagam.ru](https://docs.bedolagam.ru).
+
+**Безопасность:** в [`apps/bedolaga-bot/docker-compose.yml`](apps/bedolaga-bot/docker-compose.yml) порт **8080** — только **`127.0.0.1`**; Postgres и Redis **не** проброшены на хост. Детали — [`apps/bedolaga-bot/README.md`](apps/bedolaga-bot/README.md).
 
 ---
 
@@ -143,6 +138,7 @@ make bot-down     # stop + rm
 | Перезапуск | `make bot-restart` |
 | Остановить | `make bot-down` |
 | Статус контейнеров | `make bot-ps` |
+| Логотип для бота | `make bot-assets` |
 | Secret-scan | `make secret-scan` |
 | Локальный прогон CI (secret-scan + `docker compose config`) | `make verify` |
 | Установить git-хуки | `bash scripts/install_git_hooks.sh` |
@@ -155,12 +151,12 @@ make bot-down     # stop + rm
 
 | Путь | Назначение |
 |------|------------|
-| [`apps/telegram-shop/`](apps/telegram-shop/README.md) | Готовый Telegram-бот (`docker-compose.yaml` + `.env.sample`) |
+| [`apps/bedolaga-bot/`](apps/bedolaga-bot/README.md) | Bedolaga: `docker-compose.yml` (localhost API, без публикации БД) + скрипт ассетов |
 | [`deploy/remnawave/`](deploy/remnawave/README.md) | Docker Compose + `install_*.sh` для Panel / Node + Caddy + systemd-бэкап |
 | [`deploy/backups/`](deploy/backups/) | Скрипты бэкапа Postgres Remnawave |
 | [`docs/`](docs/) | [COMMANDS.md](docs/COMMANDS.md), [CONTRIBUTING.md](docs/CONTRIBUTING.md) |
 | [`scripts/`](scripts/) | `secret_scan.py`, git-хуки (`pre-commit`/`pre-push`) |
-| [`archive/`](archive/README.md) | `vpn-productd/`, `vpn-telegram-bot-custom/`, `telegram-bot-legacy/`, `telegram-miniapp/` |
+| [`archive/`](archive/README.md) | `vpn-productd/`, `vpn-telegram-bot-custom/`, `telegram-shop-jolymmiels/`, `telegram-bot-legacy/`, `telegram-miniapp/` |
 
 ---
 
@@ -169,7 +165,7 @@ make bot-down     # stop + rm
 GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)):
 
 1. **`secret-scan`** — `scripts/secret_scan.py` ищет утечки токенов/ключей.
-2. **`compose-lint`** — `docker compose config` валидирует [`apps/telegram-shop/docker-compose.yaml`](apps/telegram-shop/docker-compose.yaml) с примерами из `.env.sample`.
+2. **`compose-lint`** — `docker compose config` для [`apps/bedolaga-bot/docker-compose.yml`](apps/bedolaga-bot/docker-compose.yml) с [`apps/bedolaga-bot/.env.ci`](apps/bedolaga-bot/.env.ci).
 
 Собственный Python-бот со всеми 205 тестами (ruff + mypy + pytest --cov ≥ 80 %) лежит в [`archive/vpn-telegram-bot-custom/`](archive/vpn-telegram-bot-custom/). Если захочешь вернуться к своему боту — перенеси обратно в `apps/` и восстанови `bot-quality` job из истории `.github/workflows/ci.yml`.
 
@@ -190,7 +186,7 @@ bash scripts/install_git_hooks.sh
 
 | Документ | Что внутри |
 |----------|------------|
-| [`apps/telegram-shop/README.md`](apps/telegram-shop/README.md) | Запуск / обновление готового бота |
+| [`apps/bedolaga-bot/README.md`](apps/bedolaga-bot/README.md) | Запуск Bedolaga, безопасность портов, логи |
 | [`deploy/remnawave/README.md`](deploy/remnawave/README.md) | Установка Panel + Node, DNS, SSL, бэкапы |
 | [`docs/COMMANDS.md`](docs/COMMANDS.md) | Полная шпаргалка |
 | [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | Процесс разработки |
@@ -200,4 +196,4 @@ bash scripts/install_git_hooks.sh
 
 ## Лицензия
 
-[MPL-2.0](LICENSE). Бот `remnawave-telegram-shop` распространяется под собственной лицензией (см. upstream).
+[MPL-2.0](LICENSE). Bedolaga — лицензия [MIT](https://github.com/BEDOLAGA-DEV/remnawave-bedolaga-telegram-bot/blob/main/LICENSE) (см. upstream).

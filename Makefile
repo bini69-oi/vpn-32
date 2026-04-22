@@ -1,24 +1,28 @@
 PYTHON ?= python3
-BOT_DIR := apps/telegram-shop
+BOT_DIR := apps/bedolaga-bot
 COMPOSE ?= docker compose
 
-.PHONY: help bot-up bot-down bot-logs bot-pull bot-restart bot-ps bot-export-audit secret-scan verify ci clean
+.PHONY: help bot-up bot-down bot-logs bot-pull bot-restart bot-ps bot-assets secret-scan verify ci clean
 
 help:
-	@echo "VPN Product (Remnawave + готовый Telegram-shop бот) — Makefile"
+	@echo "VPN Product (Remnawave + Bedolaga Telegram-бот) — Makefile"
 	@echo
-	@echo "  make bot-up         — поднять Telegram-бот (apps/telegram-shop, docker compose up -d)"
+	@echo "  make bot-up         — поднять Bedolaga (apps/bedolaga-bot, docker compose up -d)"
 	@echo "  make bot-down       — остановить и удалить контейнеры бота"
 	@echo "  make bot-logs       — tail логов бота"
 	@echo "  make bot-pull       — docker compose pull + up -d (обновление образа)"
-	@echo "  make bot-restart    — перезапуск бота без обновления"
-	@echo "  make bot-ps         — статус контейнеров бота"
-	@echo "  make bot-export-audit — CSV+лог в apps/telegram-shop/logs/ (оплаты, рефералы, лента)"
+	@echo "  make bot-restart    — перезапуск без обновления"
+	@echo "  make bot-ps         — статус контейнеров"
+	@echo "  make bot-assets     — скачать vpn_logo.png (не хранится в git)"
 	@echo "  make secret-scan    — поиск утечек секретов в репо"
-	@echo "  make verify         — всё, что гоняет CI (secret-scan + compose config)"
+	@echo "  make verify         — secret-scan + docker compose config (CI)"
+
+bot-assets:
+	cd $(BOT_DIR) && bash scripts/fetch_assets.sh
 
 bot-up:
-	@test -f $(BOT_DIR)/.env || (echo "Сначала скопируй: cp $(BOT_DIR)/.env.sample $(BOT_DIR)/.env и заполни значения" && exit 1)
+	@test -f $(BOT_DIR)/.env || (echo "Создай $(BOT_DIR)/.env — см. README: curl upstream .env.example" && exit 1)
+	@test -f $(BOT_DIR)/vpn_logo.png || (cd $(BOT_DIR) && bash scripts/fetch_assets.sh)
 	cd $(BOT_DIR) && $(COMPOSE) up -d
 
 bot-down:
@@ -28,7 +32,8 @@ bot-logs:
 	cd $(BOT_DIR) && $(COMPOSE) logs -f --tail=200
 
 bot-pull:
-	@test -f $(BOT_DIR)/.env || (echo "Сначала скопируй: cp $(BOT_DIR)/.env.sample $(BOT_DIR)/.env и заполни значения" && exit 1)
+	@test -f $(BOT_DIR)/.env || (echo "Создай $(BOT_DIR)/.env — см. README" && exit 1)
+	@test -f $(BOT_DIR)/vpn_logo.png || (cd $(BOT_DIR) && bash scripts/fetch_assets.sh)
 	cd $(BOT_DIR) && $(COMPOSE) pull && $(COMPOSE) up -d
 
 bot-restart:
@@ -36,9 +41,6 @@ bot-restart:
 
 bot-ps:
 	cd $(BOT_DIR) && $(COMPOSE) ps
-
-bot-export-audit:
-	cd $(BOT_DIR) && bash scripts/export_audit_log.sh
 
 secret-scan:
 	$(PYTHON) scripts/secret_scan.py
@@ -51,4 +53,4 @@ verify: secret-scan bot-compose-check
 ci: verify
 
 clean:
-	@echo "nothing to clean (бот теперь — готовый docker-образ)"
+	@echo "nothing to clean (образы Docker кэшируются локально)"

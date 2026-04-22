@@ -1,0 +1,13 @@
+.env
+.env.local
+*.log
+vpn_logo.png
+
+logs/*
+!logs/.gitkeep
+
+data/*
+!data/.gitkeep
+
+uploads/*
+!uploads/.gitkeep
