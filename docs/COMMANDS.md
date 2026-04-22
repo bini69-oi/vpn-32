@@ -47,6 +47,9 @@ docker compose down && docker compose up -d
 sudo bash deploy/remnawave/scripts/install_panel.sh
 sudoedit /opt/remnawave/.env   # PANEL_DOMAIN, JWT_*, SUB_PUBLIC_DOMAIN, POSTGRES_PASSWORD
 cd /opt/remnawave && docker compose pull && docker compose up -d
+# после включения Cloudflare Proxy (orange cloud) на PANEL_DOMAIN и SUB_DOMAIN:
+sudo systemctl enable --now remnawave-cloudflare-origin.service
+sudo systemctl enable --now remnawave-cloudflare-origin.timer
 ```
 
 Сервер ноды:
@@ -61,6 +64,15 @@ cd /opt/remnanode && docker compose pull && docker compose up -d
 
 ```bash
 sudo bash deploy/remnawave/scripts/backup_panel.sh   # см. README про cron/timer
+```
+
+Cloudflare hardening origin:
+
+```bash
+sudo systemctl status remnawave-cloudflare-origin.service --no-pager
+sudo systemctl status remnawave-cloudflare-origin.timer --no-pager
+sudo iptables -S REMNAWAVE_CLOUDFLARE_ORIGIN
+sudo ip6tables -S REMNAWAVE_CLOUDFLARE_ORIGIN
 ```
 
 ## Полезные API-вызовы Remnawave

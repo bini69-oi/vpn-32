@@ -19,6 +19,9 @@ echo "[3/6] Installing panel compose and env examples."
 install -m 0644 "${PROJECT_DIR}/deploy/remnawave/panel/docker-compose.yml" /opt/remnawave/docker-compose.yml
 install -m 0644 "${PROJECT_DIR}/deploy/remnawave/panel/.env.example" /opt/remnawave/.env
 install -m 0644 "${PROJECT_DIR}/deploy/remnawave/panel/caddy/Caddyfile" /opt/remnawave/caddy/Caddyfile
+install -m 0755 "${PROJECT_DIR}/deploy/remnawave/scripts/lockdown_cloudflare_origin.sh" /usr/local/bin/remnawave-cloudflare-origin.sh
+install -m 0644 "${PROJECT_DIR}/deploy/remnawave/systemd/remnawave-cloudflare-origin.service" /etc/systemd/system/remnawave-cloudflare-origin.service
+install -m 0644 "${PROJECT_DIR}/deploy/remnawave/systemd/remnawave-cloudflare-origin.timer" /etc/systemd/system/remnawave-cloudflare-origin.timer
 
 echo "IMPORTANT: edit /opt/remnawave/.env before starting."
 echo "Docs: https://docs.rw/docs/install/remnawave-panel/"
@@ -43,3 +46,6 @@ echo "  docker compose -f /opt/remnawave/docker-compose.yml logs -f -t"
 echo "Backup status:"
 echo "  systemctl status vpn-backup.timer --no-pager"
 echo "  systemctl status vpn-backup.service --no-pager"
+echo "Cloudflare origin hardening (run only AFTER orange-cloud proxy is enabled for panel/sub domains):"
+echo "  systemctl enable --now remnawave-cloudflare-origin.service"
+echo "  systemctl enable --now remnawave-cloudflare-origin.timer"

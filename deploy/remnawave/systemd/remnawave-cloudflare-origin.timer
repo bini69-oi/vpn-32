@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh Cloudflare origin allowlist for Remnawave
+
+[Timer]
+OnBootSec=5m
+OnUnitActiveSec=12h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

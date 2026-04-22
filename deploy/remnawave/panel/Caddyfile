@@ -9,12 +9,24 @@
 #
 # Источник примеров: https://docs.rw/docs/install/subscription-page/bundled (секция Caddy)
 #
-# CHECK: при использовании "Caddy with security" может понадобиться доп. конфигурация из docs.rw.
+# Панель предполагается за Cloudflare Proxy (orange cloud).
+# Origin должен принимать 80/443 только от IP Cloudflare:
+# см. deploy/remnawave/scripts/lockdown_cloudflare_origin.sh
+#
+# Документация:
+# - https://developers.cloudflare.com/fundamentals/concepts/cloudflare-ip-addresses/
+# - https://developers.cloudflare.com/support/troubleshooting/restoring-visitor-ips/restoring-original-visitor-ips/
 
 https://PANEL_DOMAIN {
-  reverse_proxy * http://remnawave:3000
+  reverse_proxy * http://remnawave:3000 {
+    header_up X-Real-IP {http.request.header.CF-Connecting-IP}
+    header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+  }
 }
 
 https://SUB_DOMAIN {
-  reverse_proxy * http://remnawave-subscription-page:3010
+  reverse_proxy * http://remnawave-subscription-page:3010 {
+    header_up X-Real-IP {http.request.header.CF-Connecting-IP}
+    header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+  }
 }

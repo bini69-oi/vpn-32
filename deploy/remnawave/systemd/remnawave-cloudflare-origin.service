@@ -1,0 +1,15 @@
+[Unit]
+Description=Restrict Remnawave origin HTTP/HTTPS access to Cloudflare IPs
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/remnawave-cloudflare-origin.sh
+
+# Minimal hardening for a root-managed firewall refresh job
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

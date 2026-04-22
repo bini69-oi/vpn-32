@@ -38,6 +38,10 @@
 
 Почему: Caddy автоматически выпустит SSL, но только если домены резолвятся на панель.
 
+Если используете **Cloudflare**, после первичной проверки доменов включите для обоих хостов
+`PANEL_DOMAIN` и `SUB_DOMAIN` режим **Proxy / orange cloud**. Иначе origin-IP панели будет
+обходить защиту Cloudflare напрямую.
+
 ---
 
 ## Panel установка
@@ -88,8 +92,45 @@ openssl rand -hex 32
 - `https://PANEL_DOMAIN` → `http://remnawave:3000`
 - `https://SUB_DOMAIN` → `http://remnawave-subscription-page:3010`
 
+Важно:
+
+- В compose панель, метрики и subscription-page уже слушают только на `127.0.0.1`.
+- Наружу остаются только `80/tcp` и `443/tcp` через Caddy.
+- `443/udp` для origin отключён: HTTP/3 нужен клиенту до Cloudflare, а не до origin.
+- Caddy прокидывает реальный IP пользователя из `CF-Connecting-IP`, когда трафик идёт через Cloudflare.
+
 Официальный пример (subscription page, Caddy):  
 `https://docs.rw/docs/install/subscription-page/bundled`
+
+### 3.1) Закрыть origin от обхода Cloudflare
+
+После того как в Cloudflare для `PANEL_DOMAIN` и `SUB_DOMAIN` включён **orange cloud**, включите
+локальный firewall-allowlist для origin:
+
+```bash
+sudo systemctl enable --now remnawave-cloudflare-origin.service
+sudo systemctl enable --now remnawave-cloudflare-origin.timer
+```
+
+Что делает защита:
+
+- забирает актуальные IP-диапазоны Cloudflare с `https://www.cloudflare.com/ips-v4` и `https://www.cloudflare.com/ips-v6`
+- разрешает доступ к `80/tcp` и `443/tcp` только от Cloudflare
+- дропает прямые подключения к origin по IP, чтобы нельзя было обходить Cloudflare и брутфорсить панель в лоб
+- обновляет allowlist по таймеру, чтобы не сломаться при изменении IP-диапазонов Cloudflare
+
+Проверка:
+
+```bash
+sudo systemctl status remnawave-cloudflare-origin.service --no-pager
+sudo systemctl status remnawave-cloudflare-origin.timer --no-pager
+sudo iptables -S REMNAWAVE_CLOUDFLARE_ORIGIN
+sudo ip6tables -S REMNAWAVE_CLOUDFLARE_ORIGIN
+```
+
+Если нужна максимальная защита админки от подбора пароля, поверх этого включите
+**Cloudflare Access** именно на `PANEL_DOMAIN`, а `SUB_DOMAIN` оставьте публичным только для клиентских
+подписок.
 
 ### 4) Первый запуск: создать superadmin
 
@@ -191,3 +232,7 @@ ls -lah /var/backups/remnawave
    - Проверьте логи Caddy.
    - Источник (пример Caddy для subpage): `https://docs.rw/docs/install/subscription-page/bundled`
 
+4) **После включения Cloudflare origin lock-down панель недоступна**
+   - Проверьте, что у `PANEL_DOMAIN` и `SUB_DOMAIN` включён orange cloud, а не `DNS only`.
+   - Если применили правила слишком рано, зайдите на сервер по SSH/консоли и временно выключите сервис:
+     `sudo systemctl disable --now remnawave-cloudflare-origin.timer remnawave-cloudflare-origin.service`
