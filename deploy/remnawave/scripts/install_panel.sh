@@ -16,7 +16,25 @@ Example:
   install_panel.sh panel.example.com sub.example.com
 
 DNS: A/AAAA for both names must point to this server before HTTPS (Let's Encrypt) works.
+
+Docker Hub rate limit: create a free hub account + Access Token, then on the server:
+  export DOCKERHUB_USER=your_username
+  export DOCKERHUB_TOKEN=your_pat
+  (re-run this script, or run: docker login -u YOUR_USERNAME and paste the token as password)
 EOF
+}
+
+maybe_docker_hub_login() {
+  if [[ -z "${DOCKERHUB_USER:-}" ]]; then
+    return 0
+  fi
+  local pw="${DOCKERHUB_TOKEN:-${DOCKERHUB_PASSWORD:-}}"
+  if [[ -z "${pw}" ]]; then
+    echo "WARNING: DOCKERHUB_USER is set but DOCKERHUB_TOKEN (or DOCKERHUB_PASSWORD) is empty; skipping docker login."
+    return 0
+  fi
+  echo "Logging in to Docker Hub as ${DOCKERHUB_USER}..."
+  printf '%s\n' "${pw}" | docker login -u "${DOCKERHUB_USER}" --password-stdin
 }
 
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
@@ -116,8 +134,15 @@ fi
 
 if [[ "${START}" -eq 1 ]]; then
   echo "[4/6] Starting Remnawave Panel containers."
+  maybe_docker_hub_login
   cd /opt/remnawave
-  docker compose up -d
+  if ! docker compose up -d; then
+    echo ""
+    echo "If you saw Docker Hub 'pull rate limit', run: docker login"
+    echo "or set DOCKERHUB_USER + DOCKERHUB_TOKEN and re-run this script, then:"
+    echo "  cd /opt/remnawave && docker compose up -d"
+    exit 1
+  fi
 else
   echo "[4/6] Skipping docker compose (not configured yet)."
   echo "Run with two arguments (panel FQDN and subscription FQDN), for example:"

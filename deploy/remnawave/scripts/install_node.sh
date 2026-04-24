@@ -8,6 +8,19 @@ fi
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
+maybe_docker_hub_login() {
+  if [[ -z "${DOCKERHUB_USER:-}" ]]; then
+    return 0
+  fi
+  local pw="${DOCKERHUB_TOKEN:-${DOCKERHUB_PASSWORD:-}}"
+  if [[ -z "${pw}" ]]; then
+    echo "WARNING: DOCKERHUB_USER is set but DOCKERHUB_TOKEN (or DOCKERHUB_PASSWORD) is empty; skipping docker login."
+    return 0
+  fi
+  echo "Logging in to Docker Hub as ${DOCKERHUB_USER}..."
+  printf '%s\n' "${pw}" | docker login -u "${DOCKERHUB_USER}" --password-stdin
+}
+
 echo "[1/4] Docker."
 if docker version >/dev/null 2>&1; then
   echo "Docker already present; skipping get.docker.com."
@@ -30,8 +43,13 @@ echo "IMPORTANT: edit /opt/remnanode/.env (SECRET_KEY, NODE_PORT) before startin
 echo "Docs: https://docs.rw/docs/install/remnawave-node/"
 
 echo "[4/4] Starting Remnawave Node container."
+maybe_docker_hub_login
 cd /opt/remnanode
-docker compose up -d
+if ! docker compose up -d; then
+  echo "Docker Hub rate limit? Run: docker login"
+  echo "or export DOCKERHUB_USER + DOCKERHUB_TOKEN, then: cd /opt/remnanode && docker compose up -d"
+  exit 1
+fi
 
 echo "Node logs:"
 echo "  docker compose -f /opt/remnanode/docker-compose.yml logs -f -t"
