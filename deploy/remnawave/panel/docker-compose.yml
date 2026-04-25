@@ -17,6 +17,10 @@ x-logging: &logging
 x-env: &env
   env_file: .env
 
+# Снаружи хоста только Caddy :80/:443. remnawave / subscription-page / БД / Redis
+# не публикуются на 0.0.0.0 — доступ из интернета только через HTTPS (и Cloudflare при orange cloud).
+# Дополнительно на хосте: remnawave-cloudflare-origin (iptables) + UFW — см. deploy/remnawave/README.md
+
 services:
   remnawave:
     image: remnawave/backend:2
@@ -25,9 +29,6 @@ services:
     <<: [*common, *logging, *env]
     volumes:
       - valkey-socket:/var/run/valkey
-    ports:
-      - 127.0.0.1:3000:${APP_PORT:-3000}
-      - 127.0.0.1:3001:${METRICS_PORT:-3001}
     healthcheck:
       # curl is available in the official image (see Dockerfile):
       # https://github.com/remnawave/backend/blob/main/Dockerfile
@@ -87,8 +88,6 @@ services:
     container_name: remnawave-subscription-page
     hostname: remnawave-subscription-page
     restart: always
-    ports:
-      - '127.0.0.1:3010:3010'
     networks:
       - remnawave-network
     environment:

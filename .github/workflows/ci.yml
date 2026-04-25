@@ -32,3 +32,9 @@ jobs:
         run: |
           cp .env.example .env
           docker compose config >/dev/null
+      - name: Validate remnawave panel docker-compose
+        working-directory: deploy/remnawave/panel
+        run: |
+          cp -f .env.example .env
+          docker compose config >/dev/null
+          rm -f .env

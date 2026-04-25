@@ -94,8 +94,8 @@ openssl rand -hex 32
 
 Важно:
 
-- В compose панель, метрики и subscription-page уже слушают только на `127.0.0.1`.
-- Наружу остаются только `80/tcp` и `443/tcp` через Caddy.
+- `remnawave`, `remnawave-subscription-page`, Postgres и Redis **не** публикуют порты на хост — только внутри сети Docker; наружу **только Caddy** на `80/tcp` и `443/tcp`.
+- Метрики (`/metrics`) доступны изнутри контейнера `remnawave` по healthcheck; с хоста без проброса — при необходимости `docker exec`.
 - `443/udp` для origin отключён: HTTP/3 нужен клиенту до Cloudflare, а не до origin.
 - Caddy прокидывает реальный IP пользователя из `CF-Connecting-IP`, когда трафик идёт через Cloudflare.
 

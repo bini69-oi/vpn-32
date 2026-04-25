@@ -16,7 +16,7 @@ help:
 	@echo "  make bot-ps         — статус контейнеров"
 	@echo "  make bot-assets     — скачать vpn_logo.png (не хранится в git)"
 	@echo "  make secret-scan    — поиск утечек секретов в репо"
-	@echo "  make verify         — secret-scan + docker compose config (бот + xray-checker, CI)"
+	@echo "  make verify         — secret-scan + docker compose config (бот + xray-checker + панель Remnawave, CI)"
 
 bot-assets:
 	cd $(BOT_DIR) && bash scripts/fetch_assets.sh
@@ -52,7 +52,15 @@ bot-compose-check:
 xray-checker-compose-check:
 	cd $(XRAY_CHECKER_DIR) && cp -f .env.example .env && $(COMPOSE) config >/dev/null
 
-verify: secret-scan bot-compose-check xray-checker-compose-check
+# Панель Remnawave: только если нет локального .env (не затираем секреты разработчика)
+remnawave-panel-compose-check:
+	@if [ -f deploy/remnawave/panel/.env ]; then \
+	  echo "[skip] deploy/remnawave/panel/.env уже есть — проверка compose пропущена"; \
+	else \
+	  cd deploy/remnawave/panel && cp -f .env.example .env && $(COMPOSE) config >/dev/null && rm -f .env; \
+	fi
+
+verify: secret-scan bot-compose-check xray-checker-compose-check remnawave-panel-compose-check
 
 ci: verify
 
