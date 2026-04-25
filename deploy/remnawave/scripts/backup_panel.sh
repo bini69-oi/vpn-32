@@ -23,6 +23,11 @@ dump_path="${workdir}/remnawave-${ts}.sql"
 archive_path="${BACKUP_DIR}/remnawave-${ts}.tar.gz"
 sha_path="${archive_path}.sha256"
 
+if ! docker ps --format '{{.Names}}' | grep -qx 'remnawave-db'; then
+  echo "Skipping backup: container remnawave-db is not running (start the panel: cd /opt/remnawave && docker compose up -d)."
+  exit 0
+fi
+
 echo "Dumping database from container remnawave-db (UTC: ${ts})"
 docker exec -i remnawave-db pg_dump -U postgres -d postgres > "${dump_path}"
 
