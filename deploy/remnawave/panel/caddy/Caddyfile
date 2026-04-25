@@ -1,24 +1,31 @@
 # Remnawave reverse proxy (Caddy)
-# ВАЖНО: замените PANEL_DOMAIN и SUB_DOMAIN на реальные домены
-# ПЕРЕД запуском Caddy.
-# Caddy сам получит SSL через Let's Encrypt, если домены
-# правильно резолвятся на IP сервера панели.
+# Домены совпадают с DNS: panel.32-network.online, sub.32-network.online → IP панели.
+# Caddy получит SSL через Let's Encrypt, если A/AAAA резолвятся на этот сервер.
 #
 # Источник примеров: https://docs.rw/docs/install/subscription-page/bundled (секция Caddy)
 #
-# По умолчанию — прямой доступ к origin (без Cloudflare). Для reverse_proxy
-# Caddy сам передаёт клиенту корректные X-Forwarded-* к upstream.
+# Remnawave проверяет reverse proxy + HTTPS (ProxyCheckMiddleware): нужны
+# X-Forwarded-Proto / X-Forwarded-Host, как в доке Nginx:
+# https://docs.rw/docs/install/subscription-page/bundled
 #
-# За Cloudflare (orange cloud), если нужен реальный IP в приложении, замените
-# блок reverse_proxy на вариант с:
-#   header_up X-Real-IP {http.request.header.CF-Connecting-IP}
-#   header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
-# См. deploy/remnawave/docs/SECURITY_WIREFALL_CLOUDFLARE.md
+# За Cloudflare см. deploy/remnawave/panel/Caddyfile (CF-Connecting-IP).
 
-https://PANEL_DOMAIN {
-  reverse_proxy * http://remnawave:3000
+https://panel.32-network.online {
+  reverse_proxy * http://remnawave:3000 {
+    header_up Host {http.request.host}
+    header_up X-Forwarded-Host {http.request.host}
+    header_up X-Forwarded-Proto https
+    header_up X-Real-IP {http.request.remote.host}
+    header_up X-Forwarded-For {http.request.remote.host}
+  }
 }
 
-https://SUB_DOMAIN {
-  reverse_proxy * http://remnawave-subscription-page:3010
+https://sub.32-network.online {
+  reverse_proxy * http://remnawave-subscription-page:3010 {
+    header_up Host {http.request.host}
+    header_up X-Forwarded-Host {http.request.host}
+    header_up X-Forwarded-Proto https
+    header_up X-Real-IP {http.request.remote.host}
+    header_up X-Forwarded-For {http.request.remote.host}
+  }
 }
