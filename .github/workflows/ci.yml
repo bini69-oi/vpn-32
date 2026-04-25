@@ -26,9 +26,17 @@ jobs:
         working-directory: apps/bedolaga-bot
         run: |
           cp .env.ci .env
+          trap 'rm -f .env' EXIT
           docker compose config >/dev/null
       - name: Validate xray-checker docker-compose
         working-directory: deploy/xray-checker
         run: |
-          cp .env.example .env
+          cp -f .env.example .env
+          trap 'rm -f .env' EXIT
+          docker compose config >/dev/null
+      - name: Validate remnawave panel docker-compose
+        working-directory: deploy/remnawave/panel
+        run: |
+          cp -f .env.example .env
+          trap 'rm -f .env' EXIT
           docker compose config >/dev/null

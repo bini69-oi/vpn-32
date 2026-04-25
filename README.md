@@ -2,9 +2,9 @@
 
 # VPN Product — Remnawave + Bedolaga
 
-**Коммерческий VPN-сервис:** Remnawave Panel + Remnawave Node + Telegram-бот **[Bedolaga](https://github.com/BEDOLAGA-DEV/remnawave-bedolaga-telegram-bot)** (продажи, баланс, платежи, веб API). Ставится на 2–3 серверах; в репозитории — усиленный `docker-compose` (Postgres/Redis без публикации наружу, HTTP API только на `127.0.0.1`).
+**Коммерческий VPN-сервис:** Remnawave Panel + Remnawave Node + Telegram-бот **[Bedolaga](https://github.com/BEDOLAGA-DEV/remnawave-bedolaga-telegram-bot)** (продажи, баланс, платежи, веб API). Ставится на 2–3 серверах; в репозитории — усиленный `docker-compose` панели: Postgres/Redis и приложения **без** проброса портов на хост, наружу только **Caddy :80/:443**.
 
-[![CI](https://img.shields.io/github/actions/workflow/status/bini69-oi/vpn-work-xray/ci.yml?style=flat-square&label=CI)](https://github.com/bini69-oi/vpn-work-xray/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/bini69-oi/vpn-32/ci.yml?style=flat-square&label=CI)](https://github.com/bini69-oi/vpn-32/actions)
 [![Remnawave](https://img.shields.io/badge/Remnawave-Panel%20%2B%20Node-blue?style=flat-square)](https://docs.rw)
 [![Bot](https://img.shields.io/badge/Bot-Bedolaga-26A5E4?style=flat-square&logo=telegram&logoColor=white)](https://github.com/BEDOLAGA-DEV/remnawave-bedolaga-telegram-bot)
 [![License](https://img.shields.io/badge/License-MPL--2.0-green?style=flat-square)](LICENSE)
@@ -51,43 +51,92 @@
 
 ---
 
-## Быстрый старт (2–3 сервера)
+## Быстрый старт (минимум ручных правок)
 
-### 1. Сервер 1 — Remnawave Panel
+Шаблоны заточены под зону **`32-network.online`** (Reg.ru), без привязки к конкретным IP в репозитории:
+
+| Имя | Роль |
+|-----|------|
+| **`panel.32-network.online`** | панель Remnawave — A `panel` на **IP VPS панели** |
+| **`sub.32-network.online`** | subscription — A `sub` на **тот же IP**, что и панель |
+| **`32-network.online`**, **`www`** | при необходимости другой сайт (корень/`www` в DNS не обязаны совпадать с панелью) |
+
+Для **другой** зоны задайте `PANEL_FQDN` / `SUB_FQDN` ниже и поправьте `deploy/remnawave/panel/.env.example` + `caddy/Caddyfile`.
+
+**До запуска:** A/AAAA для панели и `sub` указывают на **IP сервера панели**. За **Cloudflare** (orange cloud) — SSL **Full (strict)** к origin.
+
+### Переменные (скопируйте блок и поменяйте только то, что нужно)
 
 ```bash
-git clone https://github.com/bini69-oi/vpn-work-xray.git
-cd vpn-work-xray
+export REPO_URL="${REPO_URL:-https://github.com/bini69-oi/vpn-32.git}"
+# Панель: два FQDN (как в DNS)
+export PANEL_FQDN="${PANEL_FQDN:-panel.32-network.online}"
+export SUB_FQDN="${SUB_FQDN:-sub.32-network.online}"
+# Нода: порт и секрет из UI панели (Management → Nodes → создать ноду)
+export NODE_PORT="${NODE_PORT:-2222}"
+export NODE_PUBLIC_IP="${NODE_PUBLIC_IP:-ЗАМЕНИТЕ_НА_ПУБЛИЧНЫЙ_IP_НОДЫ}"
+export SECRET_KEY="${SECRET_KEY:-ЗАМЕНИТЕ_НА_SECRET_KEY_ИЗ_UI}"
+```
 
-sudo bash deploy/remnawave/scripts/install_panel.sh
-sudoedit /opt/remnawave/.env     # PANEL_DOMAIN, SUB_PUBLIC_DOMAIN, JWT_AUTH_SECRET, JWT_API_TOKENS_SECRET
+### 1. Сервер панели (один заход под `root`)
+
+```bash
+apt-get update -qq && apt-get install -y git ca-certificates curl
+git clone "${REPO_URL}" /root/vpn-32 && cd /root/vpn-32
+sudo bash deploy/remnawave/scripts/install_panel.sh "${PANEL_FQDN}" "${SUB_FQDN}"
+sudo cp /root/vpn-32/deploy/remnawave/panel/caddy/Caddyfile /opt/remnawave/caddy/Caddyfile
+cd /opt/remnawave && docker compose restart caddy
+```
+
+Скрипт с двумя аргументами сам пропишет домены и JWT; в `.env` появится **случайный** `REMNAWAVE_API_TOKEN` — его **обязательно** заменить на токен из панели (иначе `https://${SUB_FQDN}` даст 502):
+
+1. Откройте `https://${PANEL_FQDN}` → зарегистрируйтесь (первый пользователь = super-admin).
+2. **Settings → API Tokens** → создайте токен.
+3. На сервере:
+
+```bash
+sudoedit /opt/remnawave/.env
+# строка REMNAWAVE_API_TOKEN=... — вставить токен из UI
 cd /opt/remnawave && docker compose up -d
-# после включения orange-cloud proxy в Cloudflare:
-sudo systemctl enable --now remnawave-cloudflare-origin.service
-sudo systemctl enable --now remnawave-cloudflare-origin.timer
-# DDoS/брутфорс по HTTPS — настройки в Cloudflare (WAF, rate limit); SSH — ключи + UFW:
-# см. deploy/remnawave/docs/SECURITY_WIREFALL_CLOUDFLARE.md
+curl -sI "https://${PANEL_FQDN}/" | head -5
+curl -sI "https://${SUB_FQDN}/" | head -5
+```
+
+**Cloudflare origin** (только после orange cloud для обоих доменов):
+
+```bash
+cd /root/vpn-32
+sudo systemctl enable --now remnawave-cloudflare-origin.service remnawave-cloudflare-origin.timer
+# опционально UFW на панели (сначала прочитайте deploy/remnawave/docs/SECURITY_WIREFALL_CLOUDFLARE.md):
 # sudo CONFIRM=1 ADMIN_SSH_CIDR=ВАШ_IP/32 bash deploy/remnawave/scripts/harden_ufw_panel.sh
 ```
 
-DNS: `PANEL_DOMAIN` и `SUB_DOMAIN` резолвятся на IP панели, Caddy сам выпустит SSL.
-Первый зарегистрированный в UI пользователь — **super-admin** (подробности — [`deploy/remnawave/README.md`](deploy/remnawave/README.md)).
+Без двух аргументов к `install_panel.sh` можно править только `/opt/remnawave/.env` и Caddy вручную — см. [`deploy/remnawave/README.md`](deploy/remnawave/README.md).
 
-### 2. Сервер 2 — Remnawave Node
+### 2. Сервер ноды (один заход под `root`)
 
-В UI Panel: `Management → Nodes → +` — получите `SECRET_KEY` и выберите `NODE_PORT`.
+В UI панели при создании ноды укажите **публичный IP ноды** = `NODE_PUBLIC_IP` и **Node Port** = `NODE_PORT`, затем скопируйте `SECRET_KEY` в переменную окружения на ноде (см. блок переменных выше).
 
 ```bash
-git clone https://github.com/bini69-oi/vpn-work-xray.git
-cd vpn-work-xray
+apt-get update -qq && apt-get install -y git ca-certificates curl
+git clone "${REPO_URL}" /root/vpn-32 && cd /root/vpn-32
 sudo bash deploy/remnawave/scripts/install_node.sh
-sudoedit /opt/remnanode/.env     # NODE_PORT + SECRET_KEY из UI
+sudo tee /opt/remnanode/.env >/dev/null <<EOF
+NODE_PORT=${NODE_PORT}
+SECRET_KEY="${SECRET_KEY}"
+EOF
+sudo chmod 0600 /opt/remnanode/.env
 cd /opt/remnanode && docker compose up -d
+docker compose logs --tail=30
 ```
 
-Фаервол (Wirefall): закрыть лишние порты на ноде, `NODE_PORT` открыт для **клиентов VPN** — см. [`deploy/remnawave/docs/SECURITY_WIREFALL_CLOUDFLARE.md`](deploy/remnawave/docs/SECURITY_WIREFALL_CLOUDFLARE.md) и `harden_ufw_node.sh`.
+На **облачном фаерволе** (Timeweb и т.п.) откройте **TCP/UDP для `NODE_PORT`** и для **портов инбаундов** из профиля (например Shadowsocks на `1234` — см. профиль в панели). На хосте при необходимости: `CONFIRM=1 NODE_PORT=... bash deploy/remnawave/scripts/harden_ufw_node.sh` — [`deploy/remnawave/docs/SECURITY_WIREFALL_CLOUDFLARE.md`](deploy/remnawave/docs/SECURITY_WIREFALL_CLOUDFLARE.md).
 
-### 3. Telegram-бот Bedolaga (рядом с Panel или отдельный сервер)
+### 3. Выдать подписку пользователю
+
+В панели: **хост (нода + профиль)** → **пользователь** → скопировать **subscription URL** (домен из `SUB_PUBLIC_DOMAIN`, у вас это `sub.32-network.online`). Клиент: обновить подписку по ссылке.
+
+### 4. Telegram-бот Bedolaga (рядом с Panel или отдельный сервер)
 
 Сначала отредактируй `.env` после скачивания (см. [apps/bedolaga-bot/README.md](apps/bedolaga-bot/README.md)).
 

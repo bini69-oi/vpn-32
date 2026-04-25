@@ -44,7 +44,7 @@ docker compose logs -f bot
 | Встроенный Web API бота | В upstream по умолчанию `WEB_API_ENABLED=false` — **не включай** API без необходимости. Если включил — задай длинный `WEB_API_DEFAULT_TOKEN` и оставь bind на `127.0.0.1` + reverse proxy с TLS. |
 | Личный кабинет (Cabinet) | См. [bedolaga-cabinet](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet) и доку: отдельный домен, `CABINET_JWT_SECRET`, CORS, HTTPS. |
 
-Панель Remnawave из этого репо (`deploy/remnawave/panel`) уже слушает приложение на **127.0.0.1**, наружу — только **Caddy 80/443** — это правильная схема и для панели, и для бота.
+Панель Remnawave из этого репо (`deploy/remnawave/panel`): приложения в Docker-сети без проброса на хост, наружу — только **Caddy 80/443** — та же идея изоляции, что и у бота на `127.0.0.1:8080`.
 
 ## Обновление образа
 

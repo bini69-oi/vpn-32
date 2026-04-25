@@ -1,6 +1,5 @@
 # Remnawave reverse proxy (Caddy)
-# Домены совпадают с DNS: panel.32-network.online, sub.32-network.online → IP панели.
-# Caddy получит SSL через Let's Encrypt, если A/AAAA резолвятся на этот сервер.
+# DNS: host `panel` и `sub` (32-network.online) → IP этого сервера; Let's Encrypt при корректных A/AAAA.
 #
 # Источник примеров: https://docs.rw/docs/install/subscription-page/bundled (секция Caddy)
 #

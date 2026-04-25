@@ -1,6 +1,5 @@
 # Remnawave reverse proxy (Caddy)
-# Домены: panel.32-network.online (панель), sub.32-network.online (страница подписки).
-# Caddy получит SSL через Let's Encrypt при корректном DNS на IP панели.
+# panel.32-network.online + sub.32-network.online (Reg.ru). Вариант за Cloudflare (CF-Connecting-IP).
 #
 # Источник примеров: https://docs.rw/docs/install/subscription-page/bundled (секция Caddy)
 #
