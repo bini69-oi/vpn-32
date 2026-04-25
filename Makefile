@@ -50,14 +50,21 @@ bot-compose-check:
 	cd $(BOT_DIR) && $(COMPOSE) config >/dev/null
 
 xray-checker-compose-check:
-	cd $(XRAY_CHECKER_DIR) && cp -f .env.example .env && $(COMPOSE) config >/dev/null
+	@( cd $(XRAY_CHECKER_DIR) && cp -f .env.example .env && $(COMPOSE) config >/dev/null ); \
+	ec=$$?; \
+	rm -f $(XRAY_CHECKER_DIR)/.env; \
+	exit $$ec
 
-# Панель Remnawave: только если нет локального .env (не затираем секреты разработчика)
+# Панель Remnawave: только если нет локального .env (не затираем секреты разработчика).
+# Временный .env удаляем всегда — иначе при падении compose следующий make verify навсегда «skip».
 remnawave-panel-compose-check:
 	@if [ -f deploy/remnawave/panel/.env ]; then \
 	  echo "[skip] deploy/remnawave/panel/.env уже есть — проверка compose пропущена"; \
 	else \
-	  cd deploy/remnawave/panel && cp -f .env.example .env && $(COMPOSE) config >/dev/null && rm -f .env; \
+	  ( cd deploy/remnawave/panel && cp -f .env.example .env && $(COMPOSE) config >/dev/null ); \
+	  ec=$$?; \
+	  rm -f deploy/remnawave/panel/.env; \
+	  exit $$ec; \
 	fi
 
 verify: secret-scan bot-compose-check xray-checker-compose-check remnawave-panel-compose-check
