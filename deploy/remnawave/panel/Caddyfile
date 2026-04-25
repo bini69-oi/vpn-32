@@ -1,11 +1,6 @@
 # Remnawave reverse proxy (Caddy)
-# ВАЖНО: замените PANEL_DOMAIN и SUB_DOMAIN на реальные домены
-# ПЕРЕД запуском Caddy.
-# Пример:
-# https://panel.example.com { ... }
-# https://sub.example.com { ... }
-# Caddy сам получит SSL через Let's Encrypt, если домены
-# правильно резолвятся на IP сервера панели.
+# Домены: panel.32-network.online (панель), sub.32-network.online (страница подписки).
+# Caddy получит SSL через Let's Encrypt при корректном DNS на IP панели.
 #
 # Источник примеров: https://docs.rw/docs/install/subscription-page/bundled (секция Caddy)
 #
@@ -17,15 +12,21 @@
 # - https://developers.cloudflare.com/fundamentals/concepts/cloudflare-ip-addresses/
 # - https://developers.cloudflare.com/support/troubleshooting/restoring-visitor-ips/restoring-original-visitor-ips/
 
-https://PANEL_DOMAIN {
+https://panel.32-network.online {
   reverse_proxy * http://remnawave:3000 {
+    header_up Host {http.request.host}
+    header_up X-Forwarded-Host {http.request.host}
+    header_up X-Forwarded-Proto https
     header_up X-Real-IP {http.request.header.CF-Connecting-IP}
     header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
   }
 }
 
-https://SUB_DOMAIN {
+https://sub.32-network.online {
   reverse_proxy * http://remnawave-subscription-page:3010 {
+    header_up Host {http.request.host}
+    header_up X-Forwarded-Host {http.request.host}
+    header_up X-Forwarded-Proto https
     header_up X-Real-IP {http.request.header.CF-Connecting-IP}
     header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
   }
