@@ -1,32 +1,24 @@
 # Remnawave reverse proxy (Caddy)
 # ВАЖНО: замените PANEL_DOMAIN и SUB_DOMAIN на реальные домены
 # ПЕРЕД запуском Caddy.
-# Пример:
-# https://panel.example.com { ... }
-# https://sub.example.com { ... }
 # Caddy сам получит SSL через Let's Encrypt, если домены
 # правильно резолвятся на IP сервера панели.
 #
 # Источник примеров: https://docs.rw/docs/install/subscription-page/bundled (секция Caddy)
 #
-# Панель предполагается за Cloudflare Proxy (orange cloud).
-# Origin должен принимать 80/443 только от IP Cloudflare:
-# см. deploy/remnawave/scripts/lockdown_cloudflare_origin.sh
+# По умолчанию — прямой доступ к origin (без Cloudflare). Для reverse_proxy
+# Caddy сам передаёт клиенту корректные X-Forwarded-* к upstream.
 #
-# Документация:
-# - https://developers.cloudflare.com/fundamentals/concepts/cloudflare-ip-addresses/
-# - https://developers.cloudflare.com/support/troubleshooting/restoring-visitor-ips/restoring-original-visitor-ips/
+# За Cloudflare (orange cloud), если нужен реальный IP в приложении, замените
+# блок reverse_proxy на вариант с:
+#   header_up X-Real-IP {http.request.header.CF-Connecting-IP}
+#   header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+# См. deploy/remnawave/docs/SECURITY_WIREFALL_CLOUDFLARE.md
 
 https://PANEL_DOMAIN {
-  reverse_proxy * http://remnawave:3000 {
-    header_up X-Real-IP {http.request.header.CF-Connecting-IP}
-    header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
-  }
+  reverse_proxy * http://remnawave:3000
 }
 
 https://SUB_DOMAIN {
-  reverse_proxy * http://remnawave-subscription-page:3010 {
-    header_up X-Real-IP {http.request.header.CF-Connecting-IP}
-    header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
-  }
+  reverse_proxy * http://remnawave-subscription-page:3010
 }
