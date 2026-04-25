@@ -50,10 +50,14 @@ bot-compose-check:
 	cd $(BOT_DIR) && $(COMPOSE) config >/dev/null
 
 xray-checker-compose-check:
-	@( cd $(XRAY_CHECKER_DIR) && cp -f .env.example .env && $(COMPOSE) config >/dev/null ); \
-	ec=$$?; \
-	rm -f $(XRAY_CHECKER_DIR)/.env; \
-	exit $$ec
+	@if [ -f $(XRAY_CHECKER_DIR)/.env ]; then \
+	  echo "[skip] $(XRAY_CHECKER_DIR)/.env уже есть — проверка compose пропущена"; \
+	else \
+	  ( cd $(XRAY_CHECKER_DIR) && cp -f .env.example .env && $(COMPOSE) config >/dev/null ); \
+	  ec=$$?; \
+	  rm -f $(XRAY_CHECKER_DIR)/.env; \
+	  exit $$ec; \
+	fi
 
 # Панель Remnawave: только если нет локального .env (не затираем секреты разработчика).
 # Временный .env удаляем всегда — иначе при падении compose следующий make verify навсегда «skip».
