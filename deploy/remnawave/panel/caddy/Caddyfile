@@ -28,3 +28,32 @@ https://sub.32-network.online {
     header_up X-Forwarded-For {http.request.remote.host}
   }
 }
+
+# Bedolaga Cabinet (если бот на этом же хосте в Docker).
+# Контейнер caddy должен быть в сети бота, иначе не резолвятся имена:
+#   docker network connect bedolaga-bot_bot_network caddy
+# (имя сети: docker network ls | grep bedolaga)
+https://cabinet.32-network.online {
+  encode gzip zstd
+
+  handle /api/* {
+    uri strip_prefix /api
+    reverse_proxy http://remnawave_bot:8080 {
+      header_up Host {http.request.host}
+      header_up X-Forwarded-Host {http.request.host}
+      header_up X-Forwarded-Proto https
+      header_up X-Real-IP {http.request.header.CF-Connecting-IP}
+      header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+    }
+  }
+
+  handle {
+    reverse_proxy http://cabinet_frontend:80 {
+      header_up Host {http.request.host}
+      header_up X-Forwarded-Host {http.request.host}
+      header_up X-Forwarded-Proto https
+      header_up X-Real-IP {http.request.header.CF-Connecting-IP}
+      header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+    }
+  }
+}

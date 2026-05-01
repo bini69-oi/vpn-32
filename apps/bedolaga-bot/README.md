@@ -92,16 +92,38 @@ cp caddy/Cabinetfile.example caddy/Cabinetfile
 # отредактируйте https://cabinet.example.com → ваш домен
 ```
 
-### 4) Запуск с профилем `cabinet`
+### 4) Запуск
+
+**Выделенный сервер только под бота** (на `:80`/`:443` никто не слушает):
 
 ```bash
+docker compose pull
+cp caddy/Cabinetfile.example caddy/Cabinetfile
+# отредактировать домен в Cabinetfile
+docker compose --profile cabinet --profile cabinet-caddy up -d
+```
+
+**Тот же VPS, что и Remnawave** (уже есть контейнер `caddy` панели на 80/443) — **второй Caddy не поднимаем**:
+
+```bash
+docker rm -f bedolaga_cabinet_caddy 2>/dev/null || true
 docker compose pull
 docker compose --profile cabinet up -d
 ```
 
+Дальше в **Caddy панели** (`/opt/remnawave/caddy/Caddyfile`) добавьте блок для кабинета — см. шаблон в репозитории `deploy/remnawave/panel/caddy/Caddyfile` (сайт `cabinet.32-network.online`). Подключите контейнер `caddy` к сети бота и перезагрузите Caddy:
+
+```bash
+docker network ls | grep bedolaga
+docker network connect bedolaga-bot_bot_network caddy
+docker exec caddy caddy reload --config /etc/caddy/Caddyfile
+```
+
+Имя сети может отличаться (папка проекта compose): смотрите колонку **NAME** в `docker network ls`.
+
 Проверка: `curl -sI https://cabinet.example.com/` и `curl -sI https://cabinet.example.com/api/health`.
 
-На хосте должны быть открыты **80/tcp** и **443/tcp** (ufw / фаервол провайдера). Если на этом же сервере уже заняты 80/443, используйте вариант из [доки](https://docs.bedolagam.ru/cabinet/proxy-config) (отдельный прокси или раздача статики с диска).
+На выделенном сервере под бота должны быть открыты **80/tcp** и **443/tcp**. На общем сервере с панелью порты уже заняты панельным Caddy — это нормально.
 
 ## Ссылки
 
