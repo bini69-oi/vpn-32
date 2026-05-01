@@ -27,6 +27,8 @@
 1) Сначала **Panel**  
 2) Потом **Node**
 
+Полная пошаговая цепочка (команды на серверах + что ввести в UI + нода) — в разделе **[Пошагово: панель, UI и нода](#remnawave-quickstart-full)** ниже.
+
 ---
 
 ## DNS (обязательно до SSL)
@@ -43,6 +45,145 @@
 обходить защиту Cloudflare напрямую.
 
 ---
+
+<a id="remnawave-quickstart-full"></a>
+
+## Пошагово: поднять панель → что ввести в UI → поднять ноду
+
+Ниже один сквозной сценарий: **сначала панель** (сервер + браузер + токен в `.env`), **потом нода** (создание ноды в UI + сервер ноды). Имена доменов замените на свои (`panel.example.com`, `sub.example.com`).
+
+### 1) Сервер панели — установка (под `root`)
+
+```bash
+apt-get update -qq && apt-get install -y git ca-certificates curl openssl
+git clone <URL_ВАШЕГО_РЕПОЗИТОРИЯ> /root/vpn-32 && cd /root/vpn-32
+
+# Рекомендуемый вариант: скрипт сам пропишет домены, JWT и шаблон Caddy, поднимет контейнеры
+sudo bash deploy/remnawave/scripts/install_panel.sh panel.example.com sub.example.com
+```
+
+Что делает скрипт с **двумя аргументами**:
+
+- ставит Docker (если ещё нет);
+- копирует `docker-compose.yml`, `.env`, `Caddyfile` в `/opt/remnawave`;
+- подставляет в `.env`: `PANEL_DOMAIN`, `FRONT_END_DOMAIN`, `SUB_PUBLIC_DOMAIN`, случайные `JWT_*`;
+- записывает **временный** `REMNAWAVE_API_TOKEN` (случайная строка) — его нужно **заменить** на токен из UI (шаг 3);
+- выполняет `docker compose up -d` в `/opt/remnawave`;
+- ставит таймер бэкапа.
+
+Если Caddy уже был установлен ранее и вы **обновили** `Caddyfile` в репозитории, перезапишите файл на сервере и перезапустите Caddy:
+
+```bash
+sudo cp /root/vpn-32/deploy/remnawave/panel/caddy/Caddyfile /opt/remnawave/caddy/Caddyfile
+cd /opt/remnawave && docker compose restart caddy
+```
+
+Проверка, что контейнеры живы:
+
+```bash
+cd /opt/remnawave && docker compose ps
+```
+
+Первый запуск SSL: пока DNS A/AAAA для обоих имён не указывают на этот сервер, Caddy не выпустит сертификаты — смотрите логи: `docker compose logs -f caddy`.
+
+**Без двух аргументов** скрипт только положит файлы; тогда вручную заполните `/opt/remnawave/.env` и `caddy/Caddyfile` (см. раздел [Panel установка](#panel-install-advanced) ниже) и выполните `cd /opt/remnawave && docker compose up -d`.
+
+---
+
+### 2) Браузер — первый вход и роль super-admin
+
+1. Откройте в браузере **`https://panel.example.com`** (ваш `PANEL_DOMAIN`).
+2. На экране **регистрации первого пользователя** введите:
+   - **email** (логин);
+   - **пароль** (сохраните — восстановление через почту в стеке может быть недоступно; при потере доступа см. [Rescue CLI](#rescue-cli-superadmin) ниже).
+3. Отправьте форму. **Первый зарегистрированный пользователь в инсталляции становится super-admin** — дальнейшие пользователи не получают эту роль автоматически.
+
+Интерфейс Remnawave со временем обновляется; если пункты меню называются чуть иначе, ориентируйтесь на разделы **Settings**, **Management** и официальную [quick start](https://docs.rw/docs/learn-en/quick-start).
+
+---
+
+### 3) Браузер — API-токен для страницы подписок + правка `.env` на панели
+
+Страница подписок (`https://sub.example.com`) ходит в API панели с токеном из переменной **`REMNAWAVE_API_TOKEN`** в `/opt/remnawave/.env`. Пока там случайная заглушка от скрипта, подписка может отдавать **502**.
+
+1. В панели откройте **Settings** → **API Tokens** (или аналог «API / токены»).
+2. Нажмите создание нового токена, задайте имя (например `subscription-page`), при необходимости отметьте права по документации Remnawave.
+3. **Скопируйте выданный токен** (часто показывается один раз).
+
+На сервере панели:
+
+```bash
+sudoedit /opt/remnawave/.env
+# Найдите строку REMNAWAVE_API_TOKEN=... и вставьте токен из UI целиком, без пробелов и кавычек лишних
+cd /opt/remnawave && docker compose up -d
+```
+
+Проверка:
+
+```bash
+curl -sI "https://panel.example.com/" | head -5
+curl -sI "https://sub.example.com/" | head -5
+```
+
+Ожидаются ответы **не** 502 от `sub` (конкретный код зависит от маршрута; главное — сервис отвечает).
+
+---
+
+### 4) Браузер — создать ноду и получить `SECRET_KEY`
+
+Сделайте это **до** или **после** подготовки сервера ноды, но **секрет и порт** понадобятся в `/opt/remnanode/.env`.
+
+1. Зайдите в **Management** → **Nodes** → кнопка добавления ноды (**+** / **Add**).
+2. Заполните поля (названия в UI могут слегка отличаться):
+   - **Имя ноды** — любое понятное вам (например `nl-1`).
+   - **Адрес / IP / Host** — **публичный IPv4 (или IPv6) сервера ноды**, тот же, по которому клиенты будут стучаться в VPN. Не указывайте внутренние адреса вида `192.168.x.x` и не подставляйте домен панели или `sub` — нода обычно на **отдельном** VPS.
+   - **Node Port** — TCP-порт ноды (например `2222`). Он должен **совпасть** с `NODE_PORT` в `/opt/remnanode/.env` на сервере ноды и быть **открыт** на фаерволе облака/хоста для клиентского VPN.
+3. Сохраните ноду. В карточке ноды или в мастере создания скопируйте **`SECRET_KEY`** (секрет ноды) — длинная строка; без неё нода не авторизуется на панели.
+
+Если позже смените порт или секрет в UI — обновите `.env` на ноде и перезапустите `docker compose`.
+
+---
+
+### 5) Сервер ноды — установка и запуск (под `root`)
+
+Подставьте свой репозиторий, порт и секрет из шага 4.
+
+```bash
+apt-get update -qq && apt-get install -y git ca-certificates curl
+git clone <URL_ВАШЕГО_РЕПОЗИТОРИЯ> /root/vpn-32 && cd /root/vpn-32
+sudo bash deploy/remnawave/scripts/install_node.sh
+```
+
+Отредактируйте `/opt/remnanode/.env`:
+
+- **`NODE_PORT`** — тот же, что **Node Port** в UI (например `2222`);
+- **`SECRET_KEY`** — в кавычках, значение из UI, **без** пробелов и переносов.
+
+Пример (замените значения):
+
+```bash
+sudo tee /opt/remnanode/.env >/dev/null <<'EOF'
+NODE_PORT=2222
+SECRET_KEY="ВСТАВЬТЕ_СЕКРЕТ_ИЗ_UI"
+EOF
+sudo chmod 0600 /opt/remnanode/.env
+cd /opt/remnanode && docker compose up -d
+docker compose logs --tail=50
+```
+
+На стороне облачного провайдера откройте **входящий TCP (и при необходимости UDP)** для **`NODE_PORT`**. Дополнительно для инбаундов из профиля (другие порты) — по вашему профилю в панели. На Linux-хосте при желании включите UFW-скрипт из репозитория (см. [Node установка](#node-install-advanced) ниже и [`docs/SECURITY_WIREFALL_CLOUDFLARE.md`](docs/SECURITY_WIREFALL_CLOUDFLARE.md)).
+
+В панели нода должна перейти в состояние **онлайн / connected** (формулировка зависит от версии). Если нет — смотрите логи контейнера ноды и проверку `SECRET_KEY`, порта и фаервола.
+
+---
+
+### 6) Пользователь и подписка (кратко)
+
+Дальше в UI создаются **пользователи**, **хосты** (привязка ноды и профиля Xray), выдаётся **subscription URL**. Публичный домен в ссылках клиентов — тот, что в **`SUB_PUBLIC_DOMAIN`** (у вас в шаблоне это `sub.*`). Точные шаги зависят от версии Remnawave; см. [официальную документацию](https://docs.rw/).
+
+---
+
+<a id="panel-install-advanced"></a>
 
 ## Panel установка
 
@@ -150,6 +291,8 @@ sudo CONFIRM=1 ADMIN_SSH_CIDR=ВАШ_IP/32 bash deploy/remnawave/scripts/harden_
 
 Без `ADMIN_SSH_CIDR` скрипт разрешит SSH с любого адреса (удобно, но слабее против брутфорса по SSH — тогда обязательно **ключи** и отключение пароля в `sshd`). Полная схема: тот же файл **`docs/SECURITY_WIREFALL_CLOUDFLARE.md`**.
 
+<a id="rescue-cli-superadmin"></a>
+
 ### 4) Первый запуск: создать superadmin
 
 По доке Remnawave: **первый зарегистрированный пользователь становится super-admin**.  
@@ -164,6 +307,8 @@ docker exec -it remnawave remnawave
 Источник: `https://docs.rw/docs/learn-en/quick-start`
 
 ---
+
+<a id="node-install-advanced"></a>
 
 ## Node установка
 

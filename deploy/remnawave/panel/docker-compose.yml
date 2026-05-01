@@ -84,7 +84,7 @@ services:
       retries: 3
 
   remnawave-subscription-page:
-    image: remnawave/subscription-page:latest
+    image: remnawave/subscription-page:7.1.8
     container_name: remnawave-subscription-page
     hostname: remnawave-subscription-page
     restart: always
@@ -94,6 +94,9 @@ services:
       - APP_PORT=3010
       - REMNAWAVE_PANEL_URL=http://remnawave:3000
       - REMNAWAVE_API_TOKEN=${REMNAWAVE_API_TOKEN}
+    depends_on:
+      remnawave:
+        condition: service_healthy
 
   caddy:
     image: caddy:2-alpine
@@ -109,8 +112,10 @@ services:
     networks:
       - remnawave-network
     depends_on:
-      - remnawave
-      - remnawave-subscription-page
+      remnawave:
+        condition: service_healthy
+      remnawave-subscription-page:
+        condition: service_started
 
 networks:
   remnawave-network:
