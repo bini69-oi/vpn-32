@@ -95,10 +95,42 @@ services:
       retries: 3
       start_period: 90s
 
+  # Веб-кабинет (опционально): docker compose --profile cabinet up -d
+  # Документация: https://docs.bedolagam.ru/cabinet/setup
+  cabinet-frontend:
+    profiles: [cabinet]
+    image: ghcr.io/bedolaga-dev/bedolaga-cabinet:latest
+    container_name: cabinet_frontend
+    restart: unless-stopped
+    networks:
+      - bot_network
+
+  caddy-cabinet:
+    profiles: [cabinet]
+    image: caddy:2-alpine
+    container_name: bedolaga_cabinet_caddy
+    restart: unless-stopped
+    depends_on:
+      - bot
+      - cabinet-frontend
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./caddy/Cabinetfile:/etc/caddy/Caddyfile:ro
+      - caddy_cabinet_data:/data
+      - caddy_cabinet_config:/config
+    networks:
+      - bot_network
+
 volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  caddy_cabinet_data:
+    driver: local
+  caddy_cabinet_config:
     driver: local
 
 networks:

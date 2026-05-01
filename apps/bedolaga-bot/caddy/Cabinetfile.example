@@ -1,0 +1,21 @@
+# Bedolaga Cabinet — пример для Caddy 2
+# Скопируйте: cp caddy/Cabinetfile.example caddy/Cabinetfile
+# Подставьте домен и перезапустите: docker compose --profile cabinet up -d
+#
+# DNS: A/AAAA этого имени → IP сервера, где крутится compose (бот + cabinet).
+# В @BotFather для бота: Bot Settings → Domain → этот же хост (см. docs.bedolagam.ru).
+
+https://cabinet.example.com {
+	encode gzip zstd
+
+	# API → backend бота (префикс /api снимается)
+	handle /api/* {
+		uri strip_prefix /api
+		reverse_proxy remnawave_bot:8080
+	}
+
+	# SPA (nginx внутри образа bedolaga-cabinet)
+	handle {
+		reverse_proxy cabinet-frontend:80
+	}
+}

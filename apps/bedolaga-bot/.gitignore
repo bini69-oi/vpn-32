@@ -1,5 +1,6 @@
 .env
 .env.local
+caddy/Cabinetfile
 *.log
 vpn_logo.png
 

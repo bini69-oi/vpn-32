@@ -58,6 +58,51 @@ docker compose down && docker compose up -d
 
 Upstream предлагает `docker-compose.local.yml` с сетью `remnawave-network`. Если панель и бот на одной машине и нужен прямой доступ бота к `http://remnawave:3000`, объединяй сети по [доке Bedolaga](https://docs.bedolagam.ru) / файлу `docker-compose.local.yml` в upstream (внешняя сеть `remnawave-network`).
 
+## Bedolaga Cabinet (веб-кабинет)
+
+Официально: [Установка Cabinet](https://docs.bedolagam.ru/cabinet/setup), репозиторий [bedolaga-cabinet](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet).
+
+В этом каталоге добавлен **опциональный** профиль Compose: фронт кабинета + Caddy на **80/443** (на том же хосте, что и бот). Панель Remnawave при этом может быть на другом сервере — бот уже ходит в неё по `REMNAWAVE_API_URL`.
+
+### 1) DNS и BotFather
+
+- Запись **A/AAAA** для кабинета (например `cabinet.example.com`) → **IP сервера бота**.
+- В **BotFather** → ваш бот → **Bot Settings → Domain** — укажите тот же домен (см. доку).
+
+### 2) Переменные в `.env` бота
+
+Добавьте и перезапустите бота (`docker compose up -d`):
+
+```env
+CABINET_ENABLED=true
+CABINET_URL=https://cabinet.example.com
+CABINET_JWT_SECRET=сгенерируйте_openssl_rand_hex_32
+CABINET_ALLOWED_ORIGINS=https://cabinet.example.com
+
+WEB_API_ENABLED=true
+WEB_API_DEFAULT_TOKEN=длинный_случайный_токен_для_API
+```
+
+`CABINET_ALLOWED_ORIGINS` и `CABINET_URL` должны совпадать с публичным URL кабинета (схема `https`, без хвостового `/` в URL для CORS обычно как в доке).
+
+### 3) Caddyfile
+
+```bash
+cp caddy/Cabinetfile.example caddy/Cabinetfile
+# отредактируйте https://cabinet.example.com → ваш домен
+```
+
+### 4) Запуск с профилем `cabinet`
+
+```bash
+docker compose pull
+docker compose --profile cabinet up -d
+```
+
+Проверка: `curl -sI https://cabinet.example.com/` и `curl -sI https://cabinet.example.com/api/health`.
+
+На хосте должны быть открыты **80/tcp** и **443/tcp** (ufw / фаервол провайдера). Если на этом же сервере уже заняты 80/443, используйте вариант из [доки](https://docs.bedolagam.ru/cabinet/proxy-config) (отдельный прокси или раздача статики с диска).
+
 ## Ссылки
 
 - Репозиторий: <https://github.com/BEDOLAGA-DEV/remnawave-bedolaga-telegram-bot>
