@@ -65,6 +65,8 @@
 
 **До запуска:** A/AAAA для панели и `sub` указывают на **IP сервера панели**. За **Cloudflare** (orange cloud) — SSL **Full (strict)** к origin.
 
+Подробная пошаговая инструкция (что вводить в браузере при регистрации, API-токен, создание ноды в UI, `.env` на ноде): **[`deploy/remnawave/README.md` — раздел «Пошагово…»](deploy/remnawave/README.md#remnawave-quickstart-full)**.
+
 ### Переменные (скопируйте блок и поменяйте только то, что нужно)
 
 ```bash
@@ -111,7 +113,7 @@ sudo systemctl enable --now remnawave-cloudflare-origin.service remnawave-cloudf
 # sudo CONFIRM=1 ADMIN_SSH_CIDR=ВАШ_IP/32 bash deploy/remnawave/scripts/harden_ufw_panel.sh
 ```
 
-Без двух аргументов к `install_panel.sh` можно править только `/opt/remnawave/.env` и Caddy вручную — см. [`deploy/remnawave/README.md`](deploy/remnawave/README.md).
+Без двух аргументов к `install_panel.sh` можно править только `/opt/remnawave/.env` и Caddy вручную — см. **[пошаговую инструкцию](deploy/remnawave/README.md#remnawave-quickstart-full)** и раздел «Panel установка» в [`deploy/remnawave/README.md`](deploy/remnawave/README.md).
 
 ### 2. Сервер ноды (один заход под `root`)
 
@@ -204,7 +206,7 @@ make bot-assets   # vpn_logo.png
 | Путь | Назначение |
 |------|------------|
 | [`apps/bedolaga-bot/`](apps/bedolaga-bot/README.md) | Bedolaga: `docker-compose.yml` (localhost API, без публикации БД) + скрипт ассетов |
-| [`deploy/remnawave/`](deploy/remnawave/README.md) | Docker Compose + `install_*.sh` для Panel / Node + Caddy + systemd-бэкап |
+| [`deploy/remnawave/`](deploy/remnawave/README.md#remnawave-quickstart-full) | Пошагово: панель, UI, нода + Compose, Caddy, `install_*.sh`, systemd-бэкап |
 | [`deploy/xray-checker/`](deploy/xray-checker/README.md) | Docker Compose для [Xray Checker](https://github.com/kutovoys/xray-checker) (подписка → проверки, UI на `127.0.0.1:2112`) |
 | [`deploy/backups/`](deploy/backups/) | Скрипты бэкапа Postgres Remnawave |
 | [`docs/`](docs/) | [COMMANDS.md](docs/COMMANDS.md), [CONTRIBUTING.md](docs/CONTRIBUTING.md) |
@@ -240,7 +242,7 @@ bash scripts/install_git_hooks.sh
 | Документ | Что внутри |
 |----------|------------|
 | [`apps/bedolaga-bot/README.md`](apps/bedolaga-bot/README.md) | Запуск Bedolaga, безопасность портов, логи |
-| [`deploy/remnawave/README.md`](deploy/remnawave/README.md) | Установка Panel + Node, DNS, SSL, бэкапы |
+| [`deploy/remnawave/README.md`](deploy/remnawave/README.md#remnawave-quickstart-full) | Пошаговая установка (команды + UI), DNS, SSL, бэкапы |
 | [`deploy/remnawave/docs/SECURITY_WIREFALL_CLOUDFLARE.md`](deploy/remnawave/docs/SECURITY_WIREFALL_CLOUDFLARE.md) | DDoS/брутфорс: Cloudflare + UFW (Wirefall), SSH |
 | [`deploy/xray-checker/README.md`](deploy/xray-checker/README.md) | Запуск мониторинга, ссылка на [GitHub](https://github.com/kutovoys/xray-checker) |
 | [`docs/COMMANDS.md`](docs/COMMANDS.md) | Полная шпаргалка |
