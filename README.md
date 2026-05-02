@@ -2,7 +2,7 @@
 
 # VPN-стек: Remnawave + Bedolaga
 
-**Инфраструктурный пет-проект:** многокомпонентное развёртывание VPN-панели и ноды на базе upstream **Remnawave** (Panel + Node, Xray-core), плюс Telegram-бот **[Bedolaga](https://github.com/BEDOLAGA-DEV/remnawave-bedolaga-telegram-bot)** для продаж, баланса, платежей и опционального веб-API.
+**VPN-32:** многокомпонентное развёртывание VPN-панели и ноды на базе upstream **Remnawave** (Panel + Node, Xray-core), плюс Telegram-бот **[Bedolaga](https://github.com/BEDOLAGA-DEV/remnawave-bedolaga-telegram-bot)** для продаж, баланса, платежей и опционального веб-API.
 
 В репозитории — не собственная реализация протокола VPN, а **оркестрация и эксплуатация**: усиленный `docker-compose` (Postgres/Redis и сервисы без лишнего проброса портов на хост), наружу по умолчанию **Caddy :80/:443**, скрипты установки панели и ноды, CI (secret-scan, проверка compose), документация по DNS/SSL и усилению периметра.
 
