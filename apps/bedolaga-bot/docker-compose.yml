@@ -82,6 +82,11 @@ services:
     ports:
       # Только localhost: снижает риск сканирования / DDoS по API и перебор токена с интернета.
       - '127.0.0.1:${WEB_API_PORT:-8080}:8080'
+    # На части VPS Docker отдаёт для api.telegram.org AAAA без рабочего IPv6 →
+    # «Network is unreachable» / TelegramNetworkError внутри контейнера, хотя с хоста curl ок.
+    # Статическая A-запись заставляет исходящий трафик идти по IPv4 (IP при сбоях: dig +short api.telegram.org).
+    extra_hosts:
+      - 'api.telegram.org:149.154.166.110'
     networks:
       - bot_network
     healthcheck:
